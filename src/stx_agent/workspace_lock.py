@@ -3,25 +3,35 @@
 from __future__ import annotations
 import os
 from pathlib import Path
+from threading import Lock
 
 from .errors import ConfigError
 from .workspace import Workspace
 
 
+_LOCAL_LOCKS: set[str] = set()
+_LOCAL_LOCKS_GUARD = Lock()
+
+
 class WorkspaceServerLock:
     def __init__(self, workspace: Workspace) -> None:
         self.path = workspace.root / ".stx" / "server.lock"
+        self._key = str(self.path.resolve()).casefold() if os.name == "nt" else str(self.path.resolve())
         self._handle = None
         self._locked = False
 
     def acquire(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with _LOCAL_LOCKS_GUARD:
+            if self._key in _LOCAL_LOCKS:
+                raise ConfigError("Another STX dashboard/task server already holds this workspace lock.")
+            _LOCAL_LOCKS.add(self._key)
         try:
-            os.chmod(self.path.parent, 0o700)
-        except OSError:
-            pass
-        self._handle = self.path.open("a+b")
-        try:
+            try:
+                os.chmod(self.path.parent, 0o700)
+            except OSError:
+                pass
+            self._handle = self.path.open("a+b")
             if self.path.stat().st_size == 0:
                 self._handle.write(b"\0")
                 self._handle.flush()
@@ -38,8 +48,11 @@ class WorkspaceServerLock:
             except OSError:
                 pass
         except (OSError, BlockingIOError) as exc:
-            self._handle.close()
-            self._handle = None
+            if self._handle is not None:
+                self._handle.close()
+                self._handle = None
+            with _LOCAL_LOCKS_GUARD:
+                _LOCAL_LOCKS.discard(self._key)
             raise ConfigError("Another STX dashboard/task server already holds this workspace lock.") from exc
 
     def release(self) -> None:
@@ -61,3 +74,5 @@ class WorkspaceServerLock:
             handle.close()
             self._handle = None
             self._locked = False
+            with _LOCAL_LOCKS_GUARD:
+                _LOCAL_LOCKS.discard(self._key)
