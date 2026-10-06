@@ -102,6 +102,19 @@ class MemoryTests(unittest.TestCase):
         self.assertFalse(reopened.forget(remembered.memory_id))
         self.assertEqual(reopened.search("checkout"), [])
 
+    def test_read_only_memory_view_filters_expired_rows_without_purging(self) -> None:
+        item = self.store.remember("Expired dashboard note", ttl_days=1)
+        with closing(sqlite3.connect(self.store.database)) as connection:
+            with connection:
+                connection.execute("UPDATE memories SET expires_at=0 WHERE id=?", (item.memory_id,))
+        before = {path.name for path in self.store.directory.iterdir()}
+        self.assertEqual(MemoryStore.read_only_list(self.workspace), [])
+        after = {path.name for path in self.store.directory.iterdir()}
+        self.assertEqual(after, before)
+        with closing(sqlite3.connect(self.store.database)) as connection:
+            count = connection.execute("SELECT COUNT(*) FROM memories WHERE id=?", (item.memory_id,)).fetchone()[0]
+        self.assertEqual(count, 1)
+
     def test_expired_memory_is_purged_and_database_is_private(self) -> None:
         item = self.store.remember("Short-lived note", ttl_days=1)
         with closing(sqlite3.connect(self.store.database)) as connection:

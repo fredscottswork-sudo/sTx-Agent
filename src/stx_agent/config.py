@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from math import isfinite
+import os
 from pathlib import Path
 import tomllib
 from typing import Any
@@ -97,6 +98,14 @@ timeout_seconds = 60
 require_api_key = true
 allow_insecure_http = false # Set true only for a trusted non-loopback endpoint.
 
+# Optional native Anthropic Messages API provider.
+# [providers.anthropic]
+# kind = "anthropic"
+# base_url = "https://api.anthropic.com/v1"
+# api_key_env = "ANTHROPIC_API_KEY"
+# timeout_seconds = 60
+# require_api_key = true
+
 [models.default]
 provider = "openai"
 model = "gpt-4o-mini" # Replace with a model supported by your endpoint.
@@ -112,6 +121,10 @@ temperature = 0.2
 # [models.reasoning]
 # provider = "openai"
 # model = "YOUR_REASONING_MODEL"
+# [models.anthropic]
+# provider = "anthropic"
+# model = "YOUR_ANTHROPIC_MODEL"
+# temperature = 0.2 # Anthropic API accepts 0–1.
 
 [permissions]
 "filesystem.read" = "allow"
@@ -121,6 +134,7 @@ temperature = 0.2
 "git.read" = "allow"
 "git.modify" = "confirm"
 "network.fetch" = "confirm"
+"tasks.history.delete" = "confirm"
 
 [logging]
 enabled = false # When enabled, only event metadata is recorded by the core.
@@ -158,6 +172,7 @@ _DEFAULT_PERMISSIONS = {
     "memory.read": PermissionMode.ALLOW,
     "memory.write": PermissionMode.CONFIRM,
     "network.fetch": PermissionMode.CONFIRM,
+    "tasks.history.delete": PermissionMode.CONFIRM,
 }
 
 
@@ -260,6 +275,8 @@ def load_config(path: Path | None) -> AppConfig:
         if not isinstance(model_name, str) or not model_name:
             raise ConfigError(f"Model profile '{name}' requires a non-empty model name.")
         temperature = _as_number(table.get("temperature", 0.2), f"models.{name}.temperature", 0, 2)
+        if providers[provider_name].kind == "anthropic" and temperature > 1:
+            raise ConfigError(f"Model profile '{name}' uses Anthropic, whose temperature must be from 0 to 1.")
         profiles[name] = ModelProfile(name, provider_name, model_name, temperature)
 
     permission_table = _as_table(raw.get("permissions"), "permissions")
@@ -355,13 +372,31 @@ def load_config(path: Path | None) -> AppConfig:
 
 
 def write_default_config(path: Path, *, overwrite: bool = False) -> None:
-    """Create a starter config without overwriting local owner settings."""
+    """Create a starter config without overwriting local owner settings.
+
+    On POSIX, create the file with owner-only permissions at the filesystem call,
+    rather than relying on a later chmod. Windows access control remains ACL-based.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    mode = "w" if overwrite else "x"
+    flags = os.O_WRONLY | os.O_CREAT
+    flags |= os.O_TRUNC if overwrite else os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor: int | None = None
     try:
-        with path.open(mode, encoding="utf-8") as handle:
+        descriptor = os.open(path, flags, 0o600)
+        if os.name == "posix" and hasattr(os, "fchmod"):
+            os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            descriptor = None
             handle.write(DEFAULT_CONFIG_TEXT)
     except FileExistsError as exc:
         raise ConfigError(f"Configuration already exists: {path} (it was not changed).") from exc
     except OSError as exc:
         raise ConfigError(f"Could not write configuration '{path}': {exc}") from exc
+    finally:
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass

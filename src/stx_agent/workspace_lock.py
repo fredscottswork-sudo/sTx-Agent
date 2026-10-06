@@ -21,7 +21,11 @@ class WorkspaceServerLock:
         self._locked = False
 
     def acquire(self) -> None:
+        if self.path.parent.is_symlink() or self.path.is_symlink():
+            raise ConfigError("The STX workspace lock path must not be a symbolic link.")
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if self.path.parent.is_symlink() or self.path.is_symlink():
+            raise ConfigError("The STX workspace lock path must not be a symbolic link.")
         with _LOCAL_LOCKS_GUARD:
             if self._key in _LOCAL_LOCKS:
                 raise ConfigError("Another STX dashboard/task server already holds this workspace lock.")

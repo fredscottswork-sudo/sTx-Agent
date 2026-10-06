@@ -50,6 +50,51 @@ class CLITests(unittest.TestCase):
             results = json.loads(output.getvalue())["results"]
             self.assertTrue(any(item["path"] == "checkout.py" for item in results))
 
+    def test_audit_json_is_read_only_and_reports_missing_configuration(self) -> None:
+        import json
+        with tempfile.TemporaryDirectory() as temp:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(["audit", "--workspace", temp, "--json"])
+            report = json.loads(output.getvalue())
+            self.assertEqual(code, 0)
+            self.assertIn("config.not_found", {item["check_id"] for item in report["findings"]})
+            self.assertFalse((Path(temp) / ".stx").exists())
+            self.assertFalse((Path(temp) / "stx.config.toml").exists())
+
+    def test_audit_strict_mode_fails_on_warnings(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            config = Path(temp) / "audit.toml"
+            config.write_text(
+                '[network]\nenabled = true\nallowed_hosts = ["*.docs.example.com"]\n',
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(["audit", "--workspace", temp, "--config", str(config), "--strict"])
+        self.assertEqual(code, 1)
+        self.assertIn("network.wildcard_allowlist", output.getvalue())
+        self.assertIn("Strict mode", output.getvalue())
+
+    def test_audit_critical_finding_returns_nonzero_without_strict_mode(self) -> None:
+        import json
+        with tempfile.TemporaryDirectory() as temp:
+            config = Path(temp) / "audit.toml"
+            config.write_text(
+                '[agent]\nautonomy = "autonomous"\n'
+                '[providers.remote]\nkind = "openai_compatible"\n'
+                'base_url = "http://model.example/v1"\nallow_insecure_http = true\n'
+                '[models.default]\nprovider = "remote"\nmodel = "test"\n'
+                '[permissions]\n"filesystem.read_sensitive" = "allow"\n',
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = main(["audit", "--workspace", temp, "--config", str(config), "--json"])
+        report = json.loads(output.getvalue())
+        self.assertEqual(code, 1)
+        self.assertGreater(report["summary"]["critical"], 0)
+
     def test_run_without_models_fails_clearly_before_network(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             errors = io.StringIO()

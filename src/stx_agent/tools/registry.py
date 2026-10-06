@@ -99,6 +99,17 @@ class ToolRegistry:
     def names(self) -> list[str]:
         return sorted(self._tools)
 
+    def describe(self) -> list[dict[str, str]]:
+        """Return a safe, read-only inventory for owner-facing controls."""
+        return [
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "capability": tool.required_capability,
+            }
+            for _, tool in sorted(self._tools.items())
+        ]
+
     def model_schemas(self, context: ToolContext | None = None) -> list[dict[str, Any]]:
         schemas = []
         for name in sorted(self._tools):

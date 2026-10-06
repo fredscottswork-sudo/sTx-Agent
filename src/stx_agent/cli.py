@@ -12,6 +12,7 @@ from typing import Sequence
 
 from . import __version__
 from .agent import Agent
+from .audit import audit_workspace
 from .config import AppConfig, load_config, write_default_config
 from .errors import ConfigError, STXError
 from .events import JsonlEventRecorder, RunEvent
@@ -121,6 +122,12 @@ def _build_parser() -> argparse.ArgumentParser:
     _common_workspace(doctor_parser)
     doctor_parser.add_argument("--config", type=Path, help="configuration file path")
 
+    audit_parser = commands.add_parser("audit", help="review local policy and storage posture without side effects")
+    _common_workspace(audit_parser)
+    audit_parser.add_argument("--config", type=Path, help="configuration file path")
+    audit_parser.add_argument("--json", action="store_true", dest="json_output", help="emit a versioned JSON report")
+    audit_parser.add_argument("--strict", action="store_true", help="return a nonzero status for warnings as well as critical findings")
+
     run_parser = commands.add_parser("run", help="run an engineering task with the configured model")
     run_parser.add_argument("task", nargs="+", help="task instruction")
     _common_workspace(run_parser)
@@ -222,6 +229,34 @@ def _run_doctor(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_audit(args: argparse.Namespace) -> int:
+    workspace = Workspace(args.workspace)
+    path = _config_path(args.config, workspace)
+    config = load_config(path)
+    report = audit_workspace(workspace, config, config_path=path)
+    if args.json_output:
+        print(json.dumps(report.as_dict(), indent=2, sort_keys=True, ensure_ascii=False))
+    else:
+        print("STX security audit (read-only; no model/network requests or configuration changes)")
+        if not report.findings:
+            print("No findings from the checks that ran.")
+        for finding in report.findings:
+            print(f"[{finding.severity.upper()}] {finding.check_id}: {finding.title}")
+            print(f"  {finding.detail}")
+            if finding.remediation:
+                print(f"  Remediation: {finding.remediation}")
+        summary = report.summary
+        print(
+            "Summary: "
+            f"{summary['critical']} critical, {summary['warning']} warning, {summary['info']} informational"
+        )
+        if args.strict:
+            print("Strict mode: warnings cause a nonzero exit status.")
+    if report.has_critical or (args.strict and report.has_warnings):
+        return 1
+    return 0
+
+
 def _run_task(args: argparse.Namespace) -> int:
     workspace = Workspace(args.workspace)
     config = _load_for_workspace(args.config, workspace)
@@ -295,6 +330,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run_serve(args)
         if args.command == "doctor":
             return _run_doctor(args)
+        if args.command == "audit":
+            return _run_audit(args)
         if args.command == "run":
             return _run_task(args)
         parser.error(f"Unknown command: {args.command}")

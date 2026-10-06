@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
+import os
+import stat
 import tempfile
 import unittest
+from pathlib import Path
 
 from stx_agent.config import load_config, write_default_config
 from stx_agent.errors import ConfigError
@@ -31,6 +33,13 @@ class ConfigAndRouterTests(unittest.TestCase):
         self.assertEqual(config.profiles["default"].provider, "openai")
         self.assertEqual(config.permissions["filesystem.read_sensitive"].value, "deny")
 
+    @unittest.skipIf(os.name == "nt", "Windows permissions are controlled by ACLs")
+    def test_new_default_config_is_private_on_posix(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "stx.config.toml"
+            write_default_config(path)
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode) & 0o077, 0)
+
     def test_repository_example_configuration_loads(self) -> None:
         example = Path(__file__).parents[1] / "stx.config.example.toml"
         config = load_config(example)
@@ -50,6 +59,17 @@ class ConfigAndRouterTests(unittest.TestCase):
             path = Path(temp) / "config.toml"
             path.write_text('[models.default]\nprovider = "missing"\nmodel = "x"\n', encoding="utf-8")
             with self.assertRaisesRegex(ConfigError, "unknown provider"):
+                load_config(path)
+
+    def test_anthropic_profile_rejects_temperature_above_one(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "config.toml"
+            path.write_text(
+                '[providers.anthropic]\nkind = "anthropic"\nbase_url = "https://api.anthropic.com/v1"\n'
+                '[models.default]\nprovider = "anthropic"\nmodel = "test-model"\ntemperature = 1.5\n',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ConfigError, "temperature must be from 0 to 1"):
                 load_config(path)
 
     def test_network_configuration_requires_safe_hostname_patterns(self) -> None:

@@ -91,7 +91,11 @@ class ProjectIndex:
         self._prepare()
 
     def _prepare(self) -> None:
+        if self.directory.is_symlink() or self.database.is_symlink():
+            raise WorkspaceError("The STX index store must not be a symbolic link.")
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if self.directory.is_symlink() or self.database.is_symlink():
+            raise WorkspaceError("The STX index store must not be a symbolic link.")
         try:
             os.chmod(self.directory, 0o700)
         except OSError:

@@ -12,6 +12,15 @@ timeout_seconds = 60
 require_api_key = true
 allow_insecure_http = false # Set true only for a trusted non-loopback endpoint.
 
+# Optional native Anthropic Messages API provider. Add an Anthropic model profile
+# below and set ANTHROPIC_API_KEY in the invoking environment.
+# [providers.anthropic]
+# kind = "anthropic"
+# base_url = "https://api.anthropic.com/v1"
+# api_key_env = "ANTHROPIC_API_KEY"
+# timeout_seconds = 60
+# require_api_key = true
+
 [models.default]
 provider = "openai"
 model = "gpt-4o-mini" # Replace with a model supported by your endpoint.
@@ -27,6 +36,10 @@ temperature = 0.2
 # [models.reasoning]
 # provider = "openai"
 # model = "YOUR_REASONING_MODEL"
+# [models.anthropic]
+# provider = "anthropic"
+# model = "YOUR_ANTHROPIC_MODEL"
+# temperature = 0.2 # Anthropic API accepts 0–1.
 
 [permissions]
 "filesystem.read" = "allow"
@@ -38,6 +51,7 @@ temperature = 0.2
 "memory.read" = "allow"
 "memory.write" = "confirm"
 "network.fetch" = "confirm"
+"tasks.history.delete" = "confirm"
 
 [logging]
 enabled = false
