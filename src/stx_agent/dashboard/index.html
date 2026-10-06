@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STX Agent Control Center</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">LOCAL ENGINEERING AGENT</p><h1>STX Control Center</h1></div>
+    <div class="connection"><span id="connection-dot" class="dot"></span><span id="connection-label">Connecting…</span></div>
+  </header>
+  <main class="layout">
+    <section class="panel composer">
+      <div class="section-heading"><div><p class="eyebrow">NEW TASK</p><h2>What should STX do?</h2></div><span class="badge">Policy-gated</span></div>
+      <form id="task-form">
+        <label for="task">Describe the task</label>
+        <textarea id="task" name="task" rows="6" maxlength="20000" placeholder="Inspect the project, explain how it works, or propose a focused change…" required></textarea>
+        <div class="form-row">
+          <label class="check"><input id="dry-run" type="checkbox"> Preview only (no side effects)</label>
+          <button type="submit" class="primary">Start task <span aria-hidden="true">↗</span></button>
+        </div>
+        <p class="hint">Writes, terminal execution, and other sensitive actions remain subject to configured permissions and approval.</p>
+      </form>
+    </section>
+    <section class="panel tasks-panel">
+      <div class="section-heading"><div><p class="eyebrow">RUN HISTORY</p><h2>Tasks</h2></div><button id="refresh" class="secondary" type="button">Refresh</button></div>
+      <div id="task-list" class="task-list"><p class="muted">Loading tasks…</p></div>
+    </section>
+    <section id="detail-panel" class="panel detail-panel">
+      <div class="section-heading"><div><p class="eyebrow">TASK DETAIL</p><h2 id="detail-title">Select a task</h2></div><span id="detail-status" class="status"></span></div>
+      <div id="detail-content" class="detail-content"><p class="muted">Choose a task from the history to inspect progress, results, and approval requests.</p></div>
+    </section>
+  </main>
+  <dialog id="token-dialog">
+    <form method="dialog" id="token-form">
+      <p class="eyebrow">REMOTE API TOKEN</p><h2>Connect securely</h2>
+      <p class="muted">Enter the STX_API_TOKEN configured by the server. It is kept only in this browser tab.</p>
+      <label for="api-token">Bearer token</label><input id="api-token" type="password" autocomplete="off" minlength="24">
+      <div class="form-row"><button class="secondary" value="cancel">Cancel</button><button id="save-token" class="primary" value="connect">Connect</button></div>
+    </form>
+  </dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
