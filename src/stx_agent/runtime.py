@@ -18,13 +18,16 @@ def provider_factory(config: AppConfig) -> Callable[[ModelProfile], ModelProvide
         if settings is None:
             from .errors import ConfigError
             raise ConfigError(f"Provider '{profile.provider}' is not configured.")
-        if settings.kind != "openai_compatible":
-            from .errors import ConfigError
-            raise ConfigError(
-                f"Provider kind '{settings.kind}' is not implemented in this MVP. "
-                "Use kind = 'openai_compatible' or add a provider adapter."
-            )
-        return OpenAICompatibleProvider(settings, profile)
+        if settings.kind == "openai_compatible":
+            return OpenAICompatibleProvider(settings, profile)
+        if settings.kind == "anthropic":
+            from .providers.anthropic import AnthropicProvider
+            return AnthropicProvider(settings, profile)
+        from .errors import ConfigError
+        raise ConfigError(
+            f"Provider kind '{settings.kind}' is not implemented. "
+            "Supported kinds: 'openai_compatible', 'anthropic'."
+        )
     return create
 
 

@@ -138,6 +138,19 @@ class AgentTests(unittest.TestCase):
         result = self.build(ScriptedProvider([final])).run("Explain")
         self.assertEqual(result.usage["total_tokens"], 9)
 
+    def test_provider_truncation_does_not_claim_completed_run(self) -> None:
+        for reason in ("length", "max_tokens", "model_context_window_exceeded"):
+            with self.subTest(reason=reason):
+                response = ProviderResponse(
+                    "Partial output",
+                    [],
+                    {"role": "assistant", "content": "Partial output"},
+                    finish_reason=reason,
+                )
+                result = self.build(ScriptedProvider([response])).run("Explain")
+                self.assertEqual(result.status, "incomplete")
+                self.assertIn("Review before treating the task as complete", result.answer)
+
     def test_denied_workspace_read_does_not_auto_index_or_send_summary(self) -> None:
         source = Path(self.temp.name) / "private_source.py"
         source.write_text("sensitive workspace detail", encoding="utf-8")

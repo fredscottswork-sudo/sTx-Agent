@@ -19,7 +19,7 @@ Agent runtime ─── metadata events ─── optional JSONL recorder
   |       |
   |       +── project index / explicit expiring memory
   v
-Model router -> ModelProvider protocol -> OpenAI-compatible HTTP adapter(s)
+Model router -> ModelProvider protocol -> OpenAI-compatible and native Anthropic adapters
   |
   +-> tool registry -> schema check -> policy/approval gate
        +-> workspace filesystem
@@ -34,13 +34,13 @@ The CLI and local server use the same agent, provider, policy, and tool composit
 1. Resolve the selected workspace and parse TOML configuration. Provider keys are read from environment variables.
 2. Select a configured model profile; explicit selection overrides the small transparent keyword router.
 3. Incrementally refresh the local metadata/symbol index when enabled and permitted. Retrieve a bounded set of relevant source snippets and matching explicit memories; repository/memory content is labeled untrusted.
-4. Ask the configured OpenAI-compatible endpoint for a response or tool calls.
+4. Ask the configured provider endpoint for a response or tool calls.
 5. Validate each tool call against its schema, capability policy, risk classification, and optional user approval. Execute only after authorization; return bounded observations.
-6. Stop at a final response, cancellation, provider/tool failure, or configured step limit. The CLI and dashboard report observed status; they do not claim tests passed unless they actually ran.
+6. Stop at a final response, cancellation, provider/tool failure, configured step limit, or provider-reported output/context truncation. Truncated output is marked incomplete; the CLI and dashboard report observed status and do not claim tests passed unless they actually ran.
 
 ### Core contracts
 
-- **Provider:** consumes messages and JSON-schema tool declarations and normalizes provider responses. The current adapter speaks an OpenAI-compatible chat-completions/tool-call shape; it is an interoperability protocol, not native adapters for every provider.
+- **Provider:** consumes normalized messages and JSON-schema tool declarations. Native adapters currently support OpenAI-compatible chat completions and Anthropic Messages; both normalize tool calls into STX's internal provider contract, bound responses, and reject redirects. This does not imply native support for every provider.
 - **Tool:** stable name, JSON input schema, capability, risk level, approval detail, and typed bounded result.
 - **Policy:** allow/confirm/deny. Unlisted permissions are denied. Confirmation is host-enforced and independent of prompt text.
 - **Agent:** bounded model/tool loop, context assembly, stop conditions, structured metadata events, and cooperative cancellation checks.
@@ -55,12 +55,13 @@ The CLI and local server use the same agent, provider, policy, and tool composit
 
 ### Implemented in the repository
 
-- Python 3.11+ package and CLI: `init`, `inspect`, `doctor`, `index`, `search`, `run`, and `serve`.
+- Python 3.11+ package and CLI: `init`, `inspect`, `doctor`, `audit`, `index`, `search`, `run`, and `serve`.
 - TOML providers/profiles, environment-based credentials, autonomy settings, and per-capability permissions.
-- OpenAI-compatible provider adapter, model routing, bounded tool loop, schema validation, typed tool results, usage reporting when supplied, and metadata events.
+- OpenAI-compatible and native Anthropic Messages provider adapters, model routing, bounded tool loop, schema validation, typed tool results, usage reporting when supplied, and metadata events.
+- Read-only `stx audit` with stable check IDs, human/JSON output, local policy/storage checks, and strict CI-friendly exit behavior; it performs no provider/network calls and no auto-fixes.
 - Workspace summary, safe list/read/search/write tools, direct-argv terminal execution, read-only Git tools, risk classifications, dry-run, and policy confirmation.
 - Incremental local file/symbol indexing, lexical ranking, bounded snippets, and explicit expiring project memory.
-- Local HTTP API/dashboard for task submission, status/history, per-action approval/denial, and cancellation. Local loopback is the default; non-loopback bind requires `STX_API_TOKEN` (at least 24 characters). The built-in server has no TLS.
+- Responsive multi-page local control center and HTTP API for task submission, profile selection, status/history, per-action approval/denial, cancellation, and confirmation-gated deletion of finished task records. Owner endpoints also manage explicit memory and re-indexing, and expose read-only settings/audit views. Configuration editing and plugin installation are not exposed. Local loopback is the default; non-loopback bind requires `STX_API_TOKEN` (at least 24 characters). Static UI assets can load for token entry; API data/actions require bearer auth. The built-in server has no TLS.
 - Optional allowlisted public HTTPS text fetch with SSRF restrictions, enabled only by configuration and permission.
 - Unit and integration tests for the above, including a local fake dashboard/API task approval flow; no hosted-model request is part of the suite.
 
@@ -68,7 +69,7 @@ See [capability-matrix.md](capability-matrix.md) for tested scope and caveats.
 
 ### Deferred or not claimed
 
-- Native Anthropic, Gemini, or other provider-specific wire adapters; the current supported protocol is OpenAI-compatible.
+- Native Gemini and other provider-specific wire adapters beyond Anthropic; the OpenAI-compatible protocol remains available for compatible endpoints.
 - MCP client/server lifecycle and remote tool discovery.
 - Headless browser/computer-use automation.
 - Arbitrary dynamic plugin loading or a plugin marketplace. Built-in tools use the `Tool` interface, but there is no third-party plugin loader.
@@ -85,7 +86,7 @@ These are not silently enabled by “autonomous” mode. Any future support must
 | Generated commands run arbitrary project code | argv arrays, `shell=False`, approval defaults, env scrubbing, bounded time/output, cancellation, process-group cleanup on POSIX | No OS/container sandbox. Windows process-tree termination is limited to the direct process; users must not treat this as safe isolation. |
 | Workspace path escape | Resolve paths against workspace; reject traversal and symlink escapes in supported cases | Hostile concurrent filesystem changes and all platform-specific reparse-point races are not fully eliminated. |
 | Secrets enter model context | Sensitive paths denied by default; source and tool output bounded; API keys come from environment; avoid secrets in tasks/memory | No perfect secret detector. User-approved sensitive reads or task text may leave for the configured model endpoint. |
-| Provider endpoint is untrusted | Endpoint is explicit; credentials not embedded in URL; secure HTTP defaults; provider timeout | OpenAI-compatible APIs vary; hosted provider retention/moderation is outside STX. |
+| Provider endpoint is untrusted | Endpoint is explicit; credentials not embedded in URL; secure HTTP defaults; provider timeout and redirects refused | Compatible APIs vary; hosted provider retention/moderation is outside STX. |
 | Browser/dashboard is exposed | Loopback by default; Host checks; remote bind requires bearer token; JSON-only bounded request bodies; restrictive CSP | HTTP has no TLS. Use a trusted TLS reverse proxy for remote access; protect the token and host OS. |
 | Network tool accesses internal services | Off by default; exact/subdomain allowlist; HTTPS/443 only; DNS IP validation/pinning; non-global IPs blocked; redirects rechecked; response caps | Public allowlisted domains can still serve malicious prompt injection. DNS/host policy must be reviewed; this is not a general browser. |
 | Task history contains private user data | Local `.stx/` database, configurable retention and maximum records; bounded outputs | Prompts/answers/approval detail are persisted until pruned or removed. POSIX mode bits are best-effort; Windows protection depends on ACLs. |
@@ -105,4 +106,4 @@ These are not silently enabled by “autonomous” mode. Any future support must
 
 ## Evolution path
 
-The original roadmap is now partially delivered: indexing/memory, persistent asynchronous task records, a dashboard/API, and constrained HTTP text fetch exist. MCP, native provider adapters, browser automation, plugin loading, resumable execution, and OS sandboxing remain future work. Changes should extend provider/tool/policy boundaries, include failure-mode tests, and update the capability matrix without conflating “implemented” with “verified on every platform.”
+The original roadmap is now partially delivered: indexing/memory, persistent asynchronous task records, a dashboard/API, constrained HTTP text fetch, and native OpenAI-compatible plus Anthropic provider adapters exist. MCP, additional provider-specific adapters, browser automation, plugin loading, resumable execution, and OS sandboxing remain future work. Changes should extend provider/tool/policy boundaries, include failure-mode tests, and update the capability matrix without conflating “implemented” with “verified on every platform.”

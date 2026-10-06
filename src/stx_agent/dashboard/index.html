@@ -3,45 +3,198 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STX Agent Control Center</title>
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b1113">
+  <title>STX · Agent Control</title>
   <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <div><p class="eyebrow">LOCAL ENGINEERING AGENT</p><h1>STX Control Center</h1></div>
-    <div class="connection"><span id="connection-dot" class="dot"></span><span id="connection-label">Connecting…</span></div>
-  </header>
-  <main class="layout">
-    <section class="panel composer">
-      <div class="section-heading"><div><p class="eyebrow">NEW TASK</p><h2>What should STX do?</h2></div><span class="badge">Policy-gated</span></div>
-      <form id="task-form">
-        <label for="task">Describe the task</label>
-        <textarea id="task" name="task" rows="6" maxlength="20000" placeholder="Inspect the project, explain how it works, or propose a focused change…" required></textarea>
-        <div class="form-row">
-          <label class="check"><input id="dry-run" type="checkbox"> Preview only (no side effects)</label>
-          <button type="submit" class="primary">Start task <span aria-hidden="true">↗</span></button>
-        </div>
-        <p class="hint">Writes, terminal execution, and other sensitive actions remain subject to configured permissions and approval.</p>
-      </form>
-    </section>
-    <section class="panel tasks-panel">
-      <div class="section-heading"><div><p class="eyebrow">RUN HISTORY</p><h2>Tasks</h2></div><button id="refresh" class="secondary" type="button">Refresh</button></div>
-      <div id="task-list" class="task-list"><p class="muted">Loading tasks…</p></div>
-    </section>
-    <section id="detail-panel" class="panel detail-panel">
-      <div class="section-heading"><div><p class="eyebrow">TASK DETAIL</p><h2 id="detail-title">Select a task</h2></div><span id="detail-status" class="status"></span></div>
-      <div id="detail-content" class="detail-content"><p class="muted">Choose a task from the history to inspect progress, results, and approval requests.</p></div>
-    </section>
-  </main>
-  <dialog id="token-dialog">
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#overview" aria-label="STX Agent Control home" data-nav="overview">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none"><path d="M20 3.5 35.7 12.6v14.8L20 36.5 4.3 27.4V12.6L20 3.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M12 14.1c0-1.4 1.2-2.5 2.7-2.5h11.1M28 25.9c0 1.4-1.2 2.5-2.7 2.5H14.2M14 12.4l12 15.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+        <span class="brand-copy"><strong>STX</strong><small>AGENT CONTROL</small></span>
+      </a>
+
+      <div class="workspace-card">
+        <span class="tiny-label">ACTIVE WORKSPACE</span>
+        <div class="workspace-name"><span class="workspace-glyph">⌘</span><strong id="workspace-name">Connecting…</strong></div>
+        <div class="workspace-foot"><span class="local-indicator"></span><span>Owner-controlled</span><span id="workspace-version" class="version-label">—</span></div>
+      </div>
+
+      <nav class="primary-nav" aria-label="Agent management">
+        <p class="nav-heading">CONTROL</p>
+        <button class="nav-link active" type="button" data-nav="overview" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg><span>Overview</span>
+        </button>
+        <button class="nav-link" type="button" data-nav="tasks">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><path d="m3.5 6 .8.8L5.8 5M3.5 12l.8.8 1.5-1.8M3.5 18l.8.8 1.5-1.8"/></svg><span>Tasks</span><span class="nav-count" id="nav-active-count">0</span>
+        </button>
+        <button class="nav-link" type="button" data-nav="memory">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2a4.3 4.3 0 0 0-4.1 3 4.1 4.1 0 0 0-3.5 6.5 4.2 4.2 0 0 0 2.1 7.4H17a4.2 4.2 0 0 0 2.1-7.4 4.1 4.1 0 0 0-3.5-6.5 4.3 4.3 0 0 0-3.6-3Z"/><path d="M12 7v10m-3-6 3 2 3-2"/></svg><span>Memory</span>
+        </button>
+        <button class="nav-link" type="button" data-nav="workspace">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5h6l2 2h9v9.8a1.7 1.7 0 0 1-1.7 1.7H5.2a1.7 1.7 0 0 1-1.7-1.7V7.5Z"/><path d="M3.5 7.5V5.2a1.7 1.7 0 0 1 1.7-1.7h4.1l2 2h7.5a1.7 1.7 0 0 1 1.7 1.7v2.3"/></svg><span>Workspace index</span>
+        </button>
+
+        <p class="nav-heading nav-heading-spaced">GOVERNANCE</p>
+        <button class="nav-link" type="button" data-nav="security">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 6v5.4c0 4.7-3 7.9-8 9.6-5-1.7-8-4.9-8-9.6V6l8-3Z"/><path d="m8.5 12.1 2.2 2.2 4.8-5"/></svg><span>Security audit</span><span class="nav-count nav-count-warn" id="nav-audit-count" hidden>!</span>
+        </button>
+        <button class="nav-link" type="button" data-nav="settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19.4 13.5 1.1.9-1.5 2.6-1.4-.5a7.7 7.7 0 0 1-1.7 1l-.2 1.5h-3l-.3-1.5a7.7 7.7 0 0 1-1.7-1l-1.4.5-1.5-2.6 1.1-.9a7.2 7.2 0 0 1 0-2l-1.1-.9 1.5-2.6 1.4.5a7.7 7.7 0 0 1 1.7-1l.3-1.5h3l.2 1.5a7.7 7.7 0 0 1 1.7 1l1.4-.5 1.5 2.6-1.1.9a7.2 7.2 0 0 1 0 2Z"/></svg><span>Agent settings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="connection-card"><span id="connection-dot" class="connection-dot offline"></span><div><strong id="connection-label">Connecting…</strong><small>Local control API</small></div><span class="pulse-ring"></span></div>
+        <p class="sidebar-note">Permissions are enforced by the host. Provider policies and OS isolation remain separate.</p>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobile-menu" type="button" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+        <div class="page-context"><div class="breadcrumb"><span>STX AGENT</span><span class="slash">/</span><strong id="page-title">Overview</strong></div><p id="page-subtitle">A clear view of your agent, active work, and policy.</p></div>
+        <div class="topbar-actions"><span class="local-badge"><span></span> LOCAL CONTROL</span><button class="icon-button" id="global-refresh" type="button" aria-label="Refresh dashboard" title="Refresh data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.5 9a7 7 0 0 1 11.7-2L20 12M4 12l2.8 5a7 7 0 0 0 11.7-2"/></svg></button></div>
+      </header>
+
+      <main class="page-stack">
+        <section class="page active" id="page-overview" data-page="overview">
+          <div class="welcome-row">
+            <div><p class="eyebrow">PRIVATE WORKSPACE · POLICY-GATED EXECUTION</p><h1>Control your agent<span class="title-period">.</span></h1><p class="welcome-copy">Manage work, approvals, memory, and system posture from one place.</p></div>
+            <button class="primary-button" type="button" data-focus-task><span class="button-plus">＋</span> New task</button>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card"><div class="metric-top"><span class="metric-label">ACTIVE TASKS</span><span class="metric-icon mint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/><circle cx="12" cy="12" r="5"/></svg></span></div><strong id="metric-active" class="metric-value">—</strong><span class="metric-foot">queued or in progress</span></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-label">NEEDS APPROVAL</span><span class="metric-icon amber"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 22 20H2L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg></span></div><strong id="metric-approvals" class="metric-value">—</strong><span class="metric-foot">waiting for your decision</span></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-label">COMPLETED</span><span class="metric-icon blue"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4.2 4.2L19 6.5"/></svg></span></div><strong id="metric-completed" class="metric-value">—</strong><span class="metric-foot">in retained task history</span></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-label">REVIEW REQUIRED</span><span class="metric-icon coral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5m0 4h.01"/><circle cx="12" cy="12" r="9"/></svg></span></div><strong id="metric-review" class="metric-value">—</strong><span class="metric-foot">incomplete, cancelled, interrupted, or failed</span></article>
+          </div>
+
+          <div class="overview-grid overview-grid-top">
+            <section class="surface task-launcher" id="task-launcher">
+              <div class="surface-heading"><div><p class="eyebrow">START SOMETHING</p><h2>Give STX a task</h2></div><span class="quiet-chip">Approval stays with you</span></div>
+              <form id="task-form" class="task-form">
+                <label class="field-label" for="task-input">Task instruction</label>
+                <textarea id="task-input" name="task" rows="4" maxlength="20000" placeholder="Inspect the project, explain a flow, or propose a focused change…" required></textarea>
+                <div class="launch-options">
+                  <div class="field-group"><label class="field-label" for="task-profile">Model profile</label><select id="task-profile" name="profile"><option value="">Default routing</option></select></div>
+                  <label class="toggle-row" for="task-dry-run"><input id="task-dry-run" type="checkbox"><span class="toggle-track"></span><span><strong>Dry run</strong><small>Preview supported changes</small></span></label>
+                </div>
+                <div class="form-footer"><p class="form-note">Tool permissions and approvals are enforced by the host.</p><button class="primary-button" type="submit" id="task-submit">Queue task <span aria-hidden="true">↗</span></button></div>
+              </form>
+            </section>
+
+            <section class="surface runtime-card">
+              <div class="surface-heading"><div><p class="eyebrow">RUNTIME</p><h2>System status</h2></div><span id="runtime-badge" class="state-badge"><span></span> Checking</span></div>
+              <div class="runtime-list">
+                <div class="runtime-row"><span>Workspace</span><strong id="runtime-workspace">—</strong></div>
+                <div class="runtime-row"><span>Autonomy</span><strong id="runtime-mode">—</strong></div>
+                <div class="runtime-row"><span>Model profiles</span><strong id="runtime-profiles">—</strong></div>
+                <div class="runtime-row"><span>Network fetch</span><strong id="runtime-network">—</strong></div>
+                <div class="runtime-row"><span>Local index</span><strong id="runtime-index">—</strong></div>
+              </div>
+              <button class="text-link" type="button" data-nav="settings">Review agent settings <span>→</span></button>
+            </section>
+          </div>
+
+          <div class="overview-grid overview-grid-bottom">
+            <section class="surface approvals-surface">
+              <div class="surface-heading"><div><p class="eyebrow">YOUR DECISION</p><h2>Pending approvals</h2></div><button class="quiet-button" type="button" data-nav="tasks">All tasks <span>→</span></button></div>
+              <div id="overview-approvals" class="approval-list"><p class="empty-state">Checking for approval requests…</p></div>
+            </section>
+            <section class="surface recent-surface">
+              <div class="surface-heading"><div><p class="eyebrow">RECENT ACTIVITY</p><h2>Latest tasks</h2></div><button class="quiet-button" type="button" data-nav="tasks">View history <span>→</span></button></div>
+              <div id="recent-tasks" class="recent-list"><p class="empty-state">Loading task history…</p></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="page" id="page-tasks" data-page="tasks" hidden>
+          <div class="page-heading"><div><p class="eyebrow">EXECUTION CONTROL</p><h1>Task management</h1><p>Inspect results, answer approvals, cancel active work, or remove finished records.</p></div><button class="secondary-button" type="button" data-focus-task>＋ New task</button></div>
+          <div class="task-management-layout">
+            <section class="surface task-browser">
+              <div class="list-toolbar"><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="task-search" type="search" placeholder="Search task history" autocomplete="off"></label><select id="task-status-filter" aria-label="Filter tasks by status"><option value="all">All statuses</option><option value="queued">Queued</option><option value="running">Running</option><option value="awaiting_approval">Needs approval</option><option value="completed">Completed</option><option value="incomplete">Incomplete</option><option value="failed">Failed</option><option value="step_limit">Step limit</option><option value="provider_error">Provider error</option><option value="cancelled">Cancelled</option><option value="interrupted">Interrupted</option></select></div>
+              <div class="browser-summary"><span id="task-list-count">0 tasks</span><button class="inline-link" type="button" id="clear-task-filters">Clear filters</button></div>
+              <div id="task-list" class="task-list"><p class="empty-state">Loading tasks…</p></div>
+            </section>
+            <section class="surface task-inspector" id="task-inspector"><div class="inspector-empty"><span class="empty-mark">◎</span><h2>Select a task</h2><p>Task status, approvals, run outcome, and actions appear here.</p></div></section>
+          </div>
+        </section>
+
+        <section class="page" id="page-memory" data-page="memory" hidden>
+          <div class="page-heading"><div><p class="eyebrow">EXPLICIT · LOCAL · EXPIRING</p><h1>Project memory</h1><p>Review what STX can retrieve for future tasks. Nothing is saved automatically.</p></div><span id="memory-policy-chip" class="quiet-chip">Owner managed</span></div>
+          <div class="memory-layout">
+            <section class="surface memory-create">
+              <div class="surface-heading"><div><p class="eyebrow">ADD A FACT</p><h2>Save a memory</h2></div><span class="surface-icon">＋</span></div>
+              <form id="memory-form">
+                <label class="field-label" for="memory-content">Memory content</label><textarea id="memory-content" rows="5" maxlength="8000" placeholder="A concise decision, preference, or useful project fact…" required></textarea>
+                <div class="memory-fields"><div class="field-group"><label class="field-label" for="memory-category">Category</label><select id="memory-category"></select></div><div class="field-group"><label class="field-label" for="memory-ttl">Expires in days</label><input id="memory-ttl" type="number" min="1" max="3650" value="180" required></div></div>
+                <div class="memory-fields"><div class="field-group"><label class="field-label" for="memory-importance">Importance <span id="importance-value">0.5</span></label><input id="memory-importance" type="range" min="0" max="1" step="0.1" value="0.5"></div><div class="field-group"><label class="field-label" for="memory-tags">Tags <span class="optional-label">optional</span></label><input id="memory-tags" type="text" maxlength="300" placeholder="api, decisions, setup"></div></div>
+                <div class="form-footer"><p class="form-note">Do not save passwords, keys, or private personal data.</p><button class="primary-button" type="submit" id="memory-submit">Save memory</button></div>
+              </form>
+            </section>
+            <section class="surface memory-library">
+              <div class="surface-heading"><div><p class="eyebrow">RETRIEVABLE CONTEXT</p><h2>Saved memories</h2></div><span id="memory-count" class="quiet-chip">—</span></div>
+              <div class="memory-toolbar"><label class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="memory-search" type="search" placeholder="Filter memories" autocomplete="off"></label><button class="icon-button small" id="memory-refresh" type="button" aria-label="Refresh memories" title="Refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.5 9a7 7 0 0 1 11.7-2L20 12M4 12l2.8 5a7 7 0 0 0 11.7-2"/></svg></button></div>
+              <div id="memory-list" class="memory-list"><p class="empty-state">Open memory management to load records.</p></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="page" id="page-workspace" data-page="workspace" hidden>
+          <div class="page-heading"><div><p class="eyebrow">LOCAL PROJECT CONTEXT</p><h1>Workspace index</h1><p>Inspect or refresh the metadata and symbol index used for bounded code retrieval.</p></div><span id="index-policy-chip" class="quiet-chip">Local SQLite</span></div>
+          <div class="workspace-grid">
+            <section class="surface index-overview">
+              <div class="surface-heading"><div><p class="eyebrow">INDEX HEALTH</p><h2>Repository map</h2></div><span id="index-state-badge" class="state-badge"><span></span> Checking</span></div>
+              <div class="index-stat-grid"><div class="index-stat"><span>Indexed files</span><strong id="index-files">—</strong></div><div class="index-stat"><span>Symbols</span><strong id="index-symbols">—</strong></div><div class="index-stat"><span>Stored source size</span><strong id="index-bytes">—</strong></div></div>
+              <div class="index-meta"><span>Last indexed</span><strong id="index-updated">—</strong></div>
+              <div class="index-action-row"><label class="check-row"><input type="checkbox" id="force-index"><span>Re-parse all eligible files</span></label><button class="primary-button" id="index-action" type="button">Refresh index <span aria-hidden="true">↻</span></button></div>
+              <p id="index-message" class="form-note">Indexing reads eligible workspace files and writes only local SQLite metadata. Secret-looking paths are skipped.</p>
+            </section>
+            <section class="surface index-guidance">
+              <p class="eyebrow">WHAT IS STORED</p><h2>Metadata, not a second source tree.</h2><p>STX stores relative paths, hashes, file sizes, language labels, and extracted symbol signatures. Bounded snippets are read from the current workspace only when a task needs context.</p>
+              <div class="guidance-points"><div><span class="check-mark">✓</span><span>Incremental file and symbol index</span></div><div><span class="check-mark">✓</span><span>Source paths remain inside this workspace</span></div><div><span class="check-mark">✓</span><span>Search results are bounded before model context</span></div></div>
+              <div class="notice-box"><strong>Not semantic search</strong><p>The current index uses lexical matching and selected symbol extraction. It is not a complete call graph or vector database.</p></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="page" id="page-security" data-page="security" hidden>
+          <div class="page-heading"><div><p class="eyebrow">READ-ONLY · LOCAL CHECKS</p><h1>Security audit</h1><p>Review policy and observable storage posture. No provider request, network probe, or auto-fix is performed.</p></div><button class="secondary-button" id="audit-refresh" type="button"><span aria-hidden="true">↻</span> Run checks</button></div>
+          <div class="audit-summary-grid"><article class="audit-count critical"><span>Critical</span><strong id="audit-critical">—</strong></article><article class="audit-count warning"><span>Warnings</span><strong id="audit-warning">—</strong></article><article class="audit-count info"><span>Informational</span><strong id="audit-info">—</strong></article><article class="audit-stamp"><span>LAST CHECK</span><strong id="audit-timestamp">Not run</strong><small>Read-only configuration & local storage</small></article></div>
+          <section class="surface audit-results"><div class="surface-heading"><div><p class="eyebrow">FINDINGS</p><h2>Review actions and exposure</h2></div><span id="audit-result-label" class="quiet-chip">Waiting</span></div><div id="audit-list" class="audit-list"><p class="empty-state">Run the local security checks to see findings.</p></div></section>
+          <div class="limitation-note"><strong>Scope note</strong><span>This is not an OS-level scanner, dependency audit, sandbox, NTFS ACL inspector, or remote service exposure test.</span></div>
+        </section>
+
+        <section class="page" id="page-settings" data-page="settings" hidden>
+          <div class="page-heading"><div><p class="eyebrow">OWNER CONFIGURATION</p><h1>Agent settings</h1><p>Inspect active providers, model profiles, permissions, tools, and retention limits.</p></div><span class="read-only-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg> Read-only view</span></div>
+          <div class="settings-grid">
+            <section class="surface settings-span"><div class="surface-heading"><div><p class="eyebrow">MODEL ROUTING</p><h2>Configured profiles</h2></div><span id="profile-count-chip" class="quiet-chip">—</span></div><div id="profile-list" class="profile-grid"><p class="empty-state">Loading model profiles…</p></div></section>
+            <section class="surface"><div class="surface-heading"><div><p class="eyebrow">PERMISSION BOUNDARY</p><h2>Capability policy</h2></div></div><div id="permission-list" class="permission-list"><p class="empty-state">Loading permissions…</p></div></section>
+            <section class="surface"><div class="surface-heading"><div><p class="eyebrow">AVAILABLE SURFACE</p><h2>Built-in tools</h2></div><span id="tool-count-chip" class="quiet-chip">—</span></div><div id="tool-list" class="tool-list"><p class="empty-state">Loading tools…</p></div></section>
+            <section class="surface settings-span"><div class="surface-heading"><div><p class="eyebrow">LOCAL DATA & NETWORK</p><h2>Runtime limits</h2></div></div><div id="limits-grid" class="limits-grid"><p class="empty-state">Loading active limits…</p></div></section>
+          </div>
+          <div class="notice-box settings-notice"><strong>Settings editing stays on the host.</strong><p>This control center does not write TOML or install providers, plugins, or executables. Edit the owner-controlled config file locally and restart STX to apply changes.</p></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="token-dialog" class="modal">
     <form method="dialog" id="token-form">
-      <p class="eyebrow">REMOTE API TOKEN</p><h2>Connect securely</h2>
-      <p class="muted">Enter the STX_API_TOKEN configured by the server. It is kept only in this browser tab.</p>
-      <label for="api-token">Bearer token</label><input id="api-token" type="password" autocomplete="off" minlength="24">
-      <div class="form-row"><button class="secondary" value="cancel">Cancel</button><button id="save-token" class="primary" value="connect">Connect</button></div>
+      <div class="modal-symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg></div>
+      <p class="eyebrow">REMOTE API AUTHENTICATION</p><h2>Connect to STX</h2>
+      <p class="modal-copy">Enter the server’s <code>STX_API_TOKEN</code>. It stays in this browser tab’s session storage and is sent only to this server.</p>
+      <label class="field-label" for="api-token">Bearer token</label><input id="api-token" type="password" autocomplete="off" minlength="24" required>
+      <div class="modal-actions"><button class="secondary-button" value="cancel">Cancel</button><button id="save-token" class="primary-button" value="connect">Connect securely</button></div>
     </form>
   </dialog>
-  <div id="toast" role="status" aria-live="polite"></div>
-  <script src="/app.js" defer></script>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

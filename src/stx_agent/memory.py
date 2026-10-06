@@ -16,6 +16,7 @@ import sqlite3
 import time
 import uuid
 
+from .errors import WorkspaceError
 from .workspace import Workspace
 
 MEMORY_CATEGORIES = {"project", "decision", "preference", "error", "episode", "working"}
@@ -51,7 +52,11 @@ class MemoryStore:
         self.retention_days = retention_days
         self.directory = workspace.root / ".stx"
         self.database = self.directory / "memory.sqlite3"
+        if self.directory.is_symlink() or self.database.is_symlink():
+            raise WorkspaceError("The STX memory store must not be a symbolic link.")
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if self.directory.is_symlink() or self.database.is_symlink():
+            raise WorkspaceError("The STX memory store must not be a symbolic link.")
         try:
             os.chmod(self.directory, 0o700)
         except OSError:
@@ -158,6 +163,63 @@ class MemoryStore:
             )
             ranked.append((score, item))
         ranked.sort(key=lambda pair: (-pair[0], -pair[1].created_at))
+        return [item for _, item in ranked[:limit]]
+
+    @staticmethod
+    def read_only_list(
+        workspace: Workspace,
+        *,
+        limit: int = 50,
+        query: str = "",
+    ) -> list[MemoryItem]:
+        """Inspect memories without creating the store, changing permissions, or purging rows."""
+        if not 1 <= limit <= 100:
+            raise ValueError("memory list limit must be from 1 to 100")
+        if len(query) > 500:
+            raise ValueError("memory query must be at most 500 characters")
+        directory = workspace.root / ".stx"
+        database = directory / "memory.sqlite3"
+        if directory.is_symlink() or database.is_symlink():
+            raise sqlite3.OperationalError("the memory store path is a symbolic link")
+        if not database.is_file():
+            return []
+        connection = sqlite3.connect(database.as_uri() + "?mode=ro", uri=True, timeout=5)
+        connection.row_factory = sqlite3.Row
+        try:
+            now = time.time()
+            rows = connection.execute(
+                "SELECT id,category,content,importance,created_at,expires_at,tags_json "
+                "FROM memories WHERE expires_at > ? ORDER BY importance DESC, created_at DESC LIMIT 500",
+                (now,),
+            ).fetchall()
+        finally:
+            connection.close()
+        tokens = {token.lower() for token in query.split() if len(token) >= 2}
+        ranked: list[tuple[float, MemoryItem]] = []
+        for row in rows:
+            try:
+                tags = json.loads(row["tags_json"])
+            except (TypeError, json.JSONDecodeError):
+                tags = []
+            if not isinstance(tags, list):
+                tags = []
+            tags = [tag for tag in tags if isinstance(tag, str)]
+            haystack = f"{row['category']} {row['content']} {' '.join(tags)}".lower()
+            matched = sum(1 for token in tokens if token in haystack)
+            if tokens and matched == 0:
+                continue
+            age_days = max(0.0, (now - float(row["created_at"])) / 86400)
+            recency = 1.0 / (1.0 + age_days / 30.0)
+            score = matched * 2 + float(row["importance"]) + recency
+            item = MemoryItem(
+                row["id"], row["category"], row["content"], float(row["importance"]),
+                float(row["created_at"]), float(row["expires_at"]), tags,
+            )
+            ranked.append((score, item))
+        if tokens:
+            ranked.sort(key=lambda pair: (-pair[0], -pair[1].created_at))
+        else:
+            ranked.sort(key=lambda pair: -pair[1].created_at)
         return [item for _, item in ranked[:limit]]
 
     def list(self, *, limit: int = 50) -> list[MemoryItem]:

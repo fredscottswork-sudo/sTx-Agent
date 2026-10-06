@@ -177,6 +177,19 @@ class TaskManager:
     def list(self, *, limit: int = 50) -> list[dict[str, Any]]:
         return self.store.list(limit=limit)
 
+    def status_counts(self) -> dict[str, int]:
+        return self.store.status_counts()
+
+    def pending_approvals(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        return self.store.pending_approvals(limit=limit)
+
+    def pending_approval_count(self) -> int:
+        return self.store.pending_approval_count()
+
+    def delete_finished(self, task_id: str) -> bool:
+        with self._lock:
+            return self.store.delete_finished(task_id)
+
     def cancel(self, task_id: str) -> bool:
         task = self.store.get(task_id)
         if task is None or task["status"] not in {"queued", "running", "awaiting_approval", "cancelling"}:

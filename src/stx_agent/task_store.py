@@ -12,6 +12,7 @@ import sqlite3
 import uuid
 from typing import Any
 
+from .errors import WorkspaceError
 from .workspace import Workspace
 
 _ACTIVE = {"queued", "running", "awaiting_approval", "cancelling"}
@@ -30,7 +31,11 @@ class TaskStore:
         self.max_records = max_records
         self.directory = workspace.root / ".stx"
         self.database = self.directory / "tasks.sqlite3"
+        if self.directory.is_symlink() or self.database.is_symlink():
+            raise WorkspaceError("The STX task store must not be a symbolic link.")
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if self.directory.is_symlink() or self.database.is_symlink():
+            raise WorkspaceError("The STX task store must not be a symbolic link.")
         try:
             os.chmod(self.directory, 0o700)
         except OSError:
@@ -176,6 +181,39 @@ class TaskStore:
                         pass
                 tasks.append(item)
             return tasks
+
+    def status_counts(self) -> dict[str, int]:
+        with self._connection() as connection:
+            rows = connection.execute("SELECT status,COUNT(*) AS count FROM tasks GROUP BY status").fetchall()
+        return {str(row["status"]): int(row["count"]) for row in rows}
+
+    def pending_approval_count(self) -> int:
+        with self._connection() as connection:
+            row = connection.execute("SELECT COUNT(*) FROM approvals WHERE status='pending'").fetchone()
+        return int(row[0])
+
+    def pending_approvals(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        if not 1 <= limit <= 200:
+            raise ValueError("approval list limit must be from 1 to 200")
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT a.id,a.task_id,a.tool_name,a.capability,a.risk,a.details,a.created_at,"
+                "substr(t.instruction,1,240) AS instruction "
+                "FROM approvals AS a JOIN tasks AS t ON t.id=a.task_id "
+                "WHERE a.status='pending' ORDER BY a.created_at LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def delete_finished(self, task_id: str) -> bool:
+        active = tuple(_ACTIVE)
+        placeholders = ",".join("?" for _ in active)
+        with self._connection() as connection:
+            cursor = connection.execute(
+                f"DELETE FROM tasks WHERE id=? AND status NOT IN ({placeholders})",
+                (task_id, *active),
+            )
+            return cursor.rowcount > 0
 
     def request_cancel(self, task_id: str) -> bool:
         active = tuple(_ACTIVE)

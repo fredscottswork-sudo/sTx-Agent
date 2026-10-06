@@ -7,12 +7,13 @@ import json
 import os
 from typing import Any, Mapping, Sequence
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 from urllib.parse import urlsplit
+from urllib.request import Request
 
 from ..config import ModelProfile, ProviderSettings
 from ..errors import ProviderError
 from .base import ProviderResponse, ToolCall
+from .transport import urlopen
 
 _MAX_RESPONSE_BYTES = 10 * 1024 * 1024
 
@@ -159,13 +160,16 @@ class OpenAICompatibleProvider:
                 if len(raw) > _MAX_RESPONSE_BYTES:
                     raise ProviderError("Model response exceeded the 10 MiB safety limit.")
         except HTTPError as exc:
+            code = exc.code
             body_preview = ""
             try:
                 body_preview = exc.read(2000).decode("utf-8", errors="replace")
             except OSError:
                 pass
+            finally:
+                exc.close()
             detail = f": {body_preview}" if body_preview else ""
-            raise ProviderError(f"Model endpoint returned HTTP {exc.code}{detail}") from exc
+            raise ProviderError(f"Model endpoint returned HTTP {code}{detail}") from exc
         except (URLError, TimeoutError, OSError) as exc:
             raise ProviderError(f"Could not reach model endpoint: {exc}") from exc
 

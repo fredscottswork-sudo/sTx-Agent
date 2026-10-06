@@ -21,6 +21,8 @@ from .tools.registry import ToolRegistry
 from .workspace import Workspace
 
 
+_INCOMPLETE_FINISH_REASONS = {"length", "max_tokens", "model_context_window_exceeded"}
+
 _SYSTEM_PROMPT = """You are STX Agent, an engineering assistant operating in a user-controlled workspace.
 
 Work only inside the declared workspace and use available tools for repository facts and changes. Inspect project structure before editing; make focused changes; run relevant tests or checks when feasible; report the commands/results that actually ran and any remaining uncertainty. Do not claim a change or verification that was not observed.
@@ -242,13 +244,20 @@ class Agent:
 
             if not response.tool_calls:
                 answer = response.content or "The model returned an empty response."
+                incomplete = response.finish_reason in _INCOMPLETE_FINISH_REASONS
+                status = "incomplete" if incomplete else "completed"
+                if incomplete:
+                    answer += (
+                        f"\n\n[STX status: incomplete; provider stopped with "
+                        f"'{response.finish_reason}'. Review before treating the task as complete.]"
+                    )
                 self._emit(
                     "run.completed", run_id,
-                    status="completed", model_turns=model_turns,
+                    status=status, model_turns=model_turns,
                     tool_calls=len(tool_observations),
                 )
                 return RunResult(
-                    run_id, answer, "completed", route.profile.name, route.profile.model,
+                    run_id, answer, status, route.profile.name, route.profile.model,
                     model_turns, len(tool_observations), tool_observations, usage,
                 )
 
