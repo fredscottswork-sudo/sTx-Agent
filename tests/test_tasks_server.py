@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from http.client import HTTPConnection
 import json
 import os
@@ -163,11 +164,12 @@ class TaskServerTests(unittest.TestCase):
         store = TaskStore(self.workspace, retention_days=1, max_records=10)
         task = store.create("old task")
         store.update(task["id"], status="completed", answer="done")
-        with sqlite3.connect(store.database) as connection:
-            connection.execute(
-                "UPDATE tasks SET updated_at=? WHERE id=?",
-                ("2000-01-01T00:00:00+00:00", task["id"]),
-            )
+        with closing(sqlite3.connect(store.database)) as connection:
+            with connection:
+                connection.execute(
+                    "UPDATE tasks SET updated_at=? WHERE id=?",
+                    ("2000-01-01T00:00:00+00:00", task["id"]),
+                )
         reopened = TaskStore(self.workspace, retention_days=1, max_records=10)
         self.assertIsNone(reopened.get(task["id"]))
 

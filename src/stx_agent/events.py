@@ -43,7 +43,10 @@ class JsonlEventRecorder:
         descriptor = os.open(self.path, flags, 0o600)
         try:
             try:
-                os.fchmod(descriptor, 0o600)
+                if hasattr(os, "fchmod"):
+                    os.fchmod(descriptor, 0o600)
+                else:
+                    os.chmod(self.path, 0o600)
             except OSError:
                 pass
             view = memoryview(payload)

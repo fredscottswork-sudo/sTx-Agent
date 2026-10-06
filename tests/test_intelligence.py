@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import os
 import sqlite3
@@ -50,8 +51,9 @@ class ProjectIndexTests(unittest.TestCase):
         results = index.search("checkout order")
         self.assertTrue(results)
         self.assertTrue(any(result["path"] == "src/checkout.py" for result in results))
-        with sqlite3.connect(index.database) as connection:
-            stored_paths = {row[0] for row in connection.execute("SELECT path FROM files")}
+        with closing(sqlite3.connect(index.database)) as connection:
+            with connection:
+                stored_paths = {row[0] for row in connection.execute("SELECT path FROM files")}
         self.assertNotIn(".env", stored_paths)
 
     def test_incremental_update_removal_and_context_retrieval(self) -> None:
@@ -102,8 +104,9 @@ class MemoryTests(unittest.TestCase):
 
     def test_expired_memory_is_purged_and_database_is_private(self) -> None:
         item = self.store.remember("Short-lived note", ttl_days=1)
-        with sqlite3.connect(self.store.database) as connection:
-            connection.execute("UPDATE memories SET expires_at=0 WHERE id=?", (item.memory_id,))
+        with closing(sqlite3.connect(self.store.database)) as connection:
+            with connection:
+                connection.execute("UPDATE memories SET expires_at=0 WHERE id=?", (item.memory_id,))
         self.assertEqual(self.store.list(), [])
         if os.name != "nt":
             self.assertEqual(stat.S_IMODE(self.store.database.stat().st_mode), 0o600)
