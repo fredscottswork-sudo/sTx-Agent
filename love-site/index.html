@@ -34,6 +34,7 @@
 
 <!-- ─────────────────────────  HUD  ───────────────────────── -->
 <div class="progress" aria-hidden="true"><i id="progressFill"></i></div>
+<div class="odo" aria-hidden="true"><b id="odoNow">000</b><span>/ ∞</span></div>
 <button class="sound" id="soundBtn" type="button" aria-pressed="false" title="Play a soft little road song">
   <span class="sound-ico" aria-hidden="true"><i></i><i></i><i></i></span>
   <span class="sound-label">road song</span>
@@ -61,8 +62,8 @@
         <a class="btn btn-primary" href="#route">Start the engine</a>
         <span class="hero-hint">sound on, if you like&nbsp;♥</span>
       </div>
+      <div class="scroll-cue" aria-hidden="true"><i></i><span>scroll to drive</span></div>
     </div>
-    <div class="scroll-cue" aria-hidden="true"><i></i><span>scroll</span></div>
   </header>
 
   <!-- ═══════════════ ROUTE MAP ═══════════════ -->
@@ -245,16 +246,29 @@
   <section class="section section-letter" id="letter">
     <div class="wrap wrap-narrow">
       <p class="kicker reveal">the letter</p>
-      <h2 class="reveal">A few things I should probably say out loud more often:</h2>
-      <ul class="hand">
-        <li class="reveal">You make ordinary Tuesdays feel like something worth remembering.</li>
-        <li class="reveal">You are kind to people who have never once been kind to them. I've watched you do it.</li>
-        <li class="reveal">You have never once made me feel like I was a lot to handle. I noticed.</li>
-        <li class="reveal">I love your laugh before I understand the joke. I always have.</li>
-        <li class="reveal">I would choose you on a Tuesday, on a crisis, on a planet with no roads at all.</li>
-        <li class="reveal">Whatever kilometre we're at — I am not looking for the exit.</li>
-      </ul>
-      <p class="sign reveal">yours, always&nbsp;—&nbsp;♥</p>
+
+      <!-- a sealed envelope she opens herself -->
+      <div class="envelope reveal" id="envelope">
+        <button class="envelope-btn" id="envelopeBtn" type="button" aria-expanded="false" aria-controls="letterBody">
+          <span class="envelope-flap" aria-hidden="true"></span>
+          <span class="envelope-front" aria-hidden="true"></span>
+          <span class="envelope-seal" aria-hidden="true">♥</span>
+          <span class="envelope-cta">tap to open</span>
+        </button>
+      </div>
+
+      <div id="letterBody" class="letter-body" hidden>
+        <h2 class="reveal">A few things I should probably say out loud more often:</h2>
+        <ul class="hand">
+          <li class="reveal">You make ordinary Tuesdays feel like something worth remembering.</li>
+          <li class="reveal">You are kind to people who have never once been kind to them. I've watched you do it.</li>
+          <li class="reveal">You have never once made me feel like I was a lot to handle. I noticed.</li>
+          <li class="reveal">I love your laugh before I understand the joke. I always have.</li>
+          <li class="reveal">I would choose you on a Tuesday, on a crisis, on a planet with no roads at all.</li>
+          <li class="reveal">Whatever kilometre we're at — I am not looking for the exit.</li>
+        </ul>
+        <p class="sign reveal">yours, always&nbsp;—&nbsp;♥</p>
+      </div>
     </div>
   </section>
 

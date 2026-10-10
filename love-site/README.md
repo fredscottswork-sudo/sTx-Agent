@@ -122,6 +122,10 @@ Because it's a plain static bundle, it deploys in seconds and costs nothing.
 
 ## What's actually going on
 
+- **Scrolling doesn't scroll the page — it drives.** Each memory is a chapter on the
+  road ahead: pinned, then flying out of the distance, up to the camera and past it,
+  while the landscape rolls underneath. You drive through her story rather than down a
+  document. The landing chapter starts at the camera, because there's no scroll above it.
 - **The road is genuinely 3D.** The centreline is a world-space curve that swings ~22m
   sideways and rolls ~8m over hills, projected to the canvas every frame. The camera
   lags the centreline (that's the steering) and banks into the bends — the world tilts,
@@ -139,8 +143,11 @@ Because it's a plain static bundle, it deploys in seconds and costs nothing.
 - **Photos** are cropped to 4:5 and lean toward the cursor as you move over them.
 - **Every feature is isolated**, so if one fails (an odd browser, a missing file) the
   rest of the page still works.
-- Respects `prefers-reduced-motion`: reduced-motion visitors get a single still frame
-  instead of an endless road.
+- **You arrive.** The whole page is a drive, so it ends with one: as she reaches the
+  last chapter the car slows to a stop, the brake lights bloom and the headlight beam
+  narrows. The odometer in the corner turns over.
+- Respects `prefers-reduced-motion`: a single still frame instead of an endless road,
+  and the 3D runway is switched off entirely so nobody gets text trapped in a viewport.
 
 ---
 

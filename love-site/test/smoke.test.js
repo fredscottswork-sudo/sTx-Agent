@@ -155,12 +155,102 @@ const dom = new JSDOM(html, {
 const w = dom.window, d = w.document;
 
 // let module init settle
+// the loader advances in random steps, so poll instead of guessing a delay
+async function waitFor(fn, ms) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    if (fn()) return true;
+    await new Promise(r => setTimeout(r, 25));
+  }
+  return fn();
+}
+
 setTimeout(async () => {
   const results = [];
 
   // 1. loader behaviour
-  const loaderGone = !d.getElementById('loader') || d.getElementById('loader').classList.contains('done');
+  const loaderGone = await waitFor(
+    () => !d.getElementById('loader') || d.getElementById('loader').classList.contains('done'), 6000);
   results.push(['loader dismisses', loaderGone]);
+
+  // ── the runway: chapters fly at the camera instead of scrolling ──
+  const stages = [...d.querySelectorAll('.hero-inner, .section > .wrap, .stop > .wrap')];
+  results.push(['runway chapters built (' + stages.length + ')', stages.length === 12]);
+
+  // jsdom has no layout: give each chapter a believable runway
+  const hosts = stages.map(el => el.parentElement);
+  hosts.forEach((h, i) => {
+    Object.defineProperty(h, 'offsetTop', { value: i * 2000, configurable: true });
+    Object.defineProperty(h, 'offsetHeight', { value: 2000, configurable: true });
+  });
+  w.dispatchEvent(new w.Event('resize'));            // rebuilds the cache
+  await new Promise(r => setTimeout(r, 80));
+
+  const zOf = el => {
+    const m = /translate3d\([^,]+,[^,]+,\s*(-?[\d.]+)px\)/.exec(el.style.transform || '');
+    return m ? parseFloat(m[1]) : NaN;
+  };
+
+  // derive expectations from the same model rather than hardcoding numbers
+  const vh = w.innerHeight || 768;
+  const span = 2000 - vh;
+  const zAt = p => 1500 + p * (-1680);
+  const zAtFirst = p => 0 + p * (-180);
+  const at = async (p, i) => {
+    Object.defineProperty(w, 'scrollY', { value: Math.round(p * span) + (i || 0) * 2000, configurable: true, writable: true });
+    w.dispatchEvent(new w.Event('scroll'));
+    await new Promise(r => setTimeout(r, 120));
+  };
+
+  // chapter 0 is the landing page: it starts at the camera, not in the distance
+  await at(0.5, 0);
+  const z0 = zOf(stages[0]), z1 = zOf(stages[1]);
+  results.push(['landing chapter drifts past (z=' + z0.toFixed(0) + ', want ' + zAtFirst(0.5) + ')',
+                Math.abs(z0 - zAtFirst(0.5)) < 30]);
+  results.push(['chapter ahead waits in the distance (z=' + z1.toFixed(0) + ')', Math.abs(z1 - zAt(0)) < 2]);
+  results.push(['current chapter is visible (opacity ' + stages[0].style.opacity + ')',
+                parseFloat(stages[0].style.opacity) > 0.9]);
+  results.push(['distant chapter is invisible (opacity ' + stages[1].style.opacity + ')',
+                parseFloat(stages[1].style.opacity) < 0.05]);
+
+  // drive to the end of chapter 0: it should have passed the camera
+  await at(1, 0);
+  const zPass = zOf(stages[0]);
+  results.push(['chapter passes the camera (z=' + zPass.toFixed(0) + ', want ' + zAt(1) + ')',
+                Math.abs(zPass - zAt(1)) < 30 && zPass < 0]);
+
+  // no chapter may be invisible while it is the one being driven through
+  let worst = 1;
+  for (let i = 1; i < stages.length; i++) {
+    for (const p of [0.30, 0.50, 0.70, 0.90]) {
+      await at(p, i);
+      const o = parseFloat(stages[i].style.opacity);
+      if (o < worst) worst = o;
+    }
+  }
+  results.push(['every chapter solid once it has arrived (worst opacity ' + worst.toFixed(2) + ')', worst > 0.99]);
+
+  // and it must be gone before its turn, or the runway would show two at once
+  await at(0, 0);
+  const q1 = parseFloat(stages[1].style.opacity);
+  results.push(['chapter hidden before its turn (opacity ' + q1 + ')', q1 < 0.01]);
+
+  // the final chapter never leaves, so its links must never be killed
+  const lastStage = stages[stages.length - 1];
+  Object.defineProperty(w, 'scrollY', { value: 11 * 2000 + 1232, configurable: true, writable: true });
+  w.dispatchEvent(new w.Event('scroll'));
+  await new Promise(r => setTimeout(r, 120));
+  const lastPE = lastStage.style.pointerEvents;
+  const lastOp = parseFloat(lastStage.style.opacity);
+  results.push(['final chapter stays live at the bottom (pe="' + lastPE + '", opacity ' + lastOp + ')',
+                lastPE !== 'none' && lastOp > 0.99]);
+
+  // and each one is still waiting in the distance before its turn
+  await at(0.5, 0);
+  const zNext = zOf(stages[1]);
+  results.push(['next chapter waits its turn (z=' + zNext.toFixed(0) + 'px)', zNext > 1400]);
+
+  await at(0, 0);
 
   // 2. reveals activated
   const revealed = d.querySelectorAll('.reveal.in').length;

@@ -475,6 +475,25 @@ function drawProps(S, p) {
           gl.addColorStop(1, rgba([255, 214, 150], 0));
           ctx.fillStyle = gl;
           ctx.fillRect(top.x - armW * 3.4, armY - armW * 3.4, armW * 6.8, armW * 6.8);
+
+          // motion blur: a streak radiating from the vanishing point, which is
+          // exactly how a passing light smears in a real photograph
+          const smear = clamp((speedNow * 1.6) / Math.max(dz, 1), 0, 1) * fog;
+          if (smear > 0.02) {
+            const vx = top.x - cx, vy = armY - horizonY;
+            const len = Math.hypot(vx, vy) * smear * 0.5;
+            const sx = top.x - vx * smear * 0.5, sy = armY - vy * smear * 0.5;
+            const lg = ctx.createLinearGradient(sx, sy, top.x, armY);
+            lg.addColorStop(0, rgba([255, 220, 160], 0));
+            lg.addColorStop(1, rgba([255, 230, 180], 0.65 * smear));
+            ctx.strokeStyle = lg;
+            ctx.lineWidth = Math.max(1, armW * 0.55);
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(top.x, armY);
+            ctx.stroke();
+            void len;
+          }
         }
       }
     }
@@ -484,7 +503,14 @@ function drawProps(S, p) {
 
 /* ── the car, banking into the corners ────────────────────────── */
 
-function drawCar(S, p) {
+/* arrival: the whole page is a drive, so the drive has to end.
+   0 → still driving, 1 → stopped, parked, brake lights on. */
+let arrival = 0;
+let speedNow = 16;
+
+/* Paint the car. Called twice: upright on the road, and mirrored onto the
+   tarmac so she sees it reflected in the surface. */
+function paintCar(S, p, alpha, flip) {
   const w = clamp(W * 0.26, 130, 250);
   const bob = REDUCED ? 0 : Math.sin(Date.now() / 90) * (1.1 + boost * 5);
   const bank = roll * 0.55;
@@ -492,6 +518,12 @@ function drawCar(S, p) {
   const baseY = H + w * 0.10 + bob;
 
   ctx.save();
+  ctx.globalAlpha = alpha;
+  if (flip) {
+    // mirror about the tarmac line, then squash so it reads as a reflection
+    ctx.translate(0, baseY * 2 + 6);
+    ctx.scale(1, -0.62);
+  }
   ctx.translate(bx, baseY);
   ctx.rotate(bank);
   ctx.translate(-bx, -baseY);
@@ -499,25 +531,28 @@ function drawCar(S, p) {
   const bodyTop = baseY - w * 0.46;
   const cabinTop = bodyTop - w * 0.42;
 
-  // headlight wash down the road ahead
-  const wash = ctx.createRadialGradient(bx, bodyTop, 0, bx, bodyTop, w * 1.8);
-  wash.addColorStop(0, `rgba(255,228,196,${0.09 + nightness(p) * 0.16})`);
-  wash.addColorStop(1, 'rgba(255,228,196,0)');
-  ctx.fillStyle = wash;
-  ctx.fillRect(bx - w * 1.8, bodyTop - w * 1.8, w * 3.6, w * 3.6);
+  if (!flip) {
+    // headlight wash down the road ahead
+    const wash = ctx.createRadialGradient(bx, bodyTop, 0, bx, bodyTop, w * 1.9);
+    wash.addColorStop(0, `rgba(255,228,196,${0.09 + nightness(p) * 0.17})`);
+    wash.addColorStop(1, 'rgba(255,228,196,0)');
+    ctx.fillStyle = wash;
+    ctx.fillRect(bx - w * 1.9, bodyTop - w * 1.9, w * 3.8, w * 3.8);
 
-  // volumetric beams
-  const beam = ctx.createLinearGradient(0, bodyTop, 0, horizonY);
-  beam.addColorStop(0, `rgba(255,232,200,${0.10 + nightness(p) * 0.16})`);
-  beam.addColorStop(1, 'rgba(255,232,200,0)');
-  ctx.fillStyle = beam;
-  ctx.beginPath();
-  ctx.moveTo(bx - w * 0.30, bodyTop);
-  ctx.lineTo(bx + w * 0.30, bodyTop);
-  ctx.lineTo(bx + w * 1.25, horizonY + 6);
-  ctx.lineTo(bx - w * 1.25, horizonY + 6);
-  ctx.closePath();
-  ctx.fill();
+    // volumetric beams, narrowing as we come to a stop
+    const beam = ctx.createLinearGradient(0, bodyTop, 0, horizonY);
+    beam.addColorStop(0, `rgba(255,232,200,${(0.10 + nightness(p) * 0.16) * (1 + arrival * 0.5)})`);
+    beam.addColorStop(1, 'rgba(255,232,200,0)');
+    ctx.fillStyle = beam;
+    const spread = 1.25 + arrival * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(bx - w * 0.30, bodyTop);
+    ctx.lineTo(bx + w * 0.30, bodyTop);
+    ctx.lineTo(bx + w * spread, horizonY + 6);
+    ctx.lineTo(bx - w * spread, horizonY + 6);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   const body = mixc([44, 34, 58], S.low, 0.10);
   const r = w * 0.09;
@@ -545,16 +580,20 @@ function drawCar(S, p) {
   ctx.roundRect(bx - w / 2, bodyTop, w, w * 0.045, [r, r, 0, 0]);
   ctx.fill();
 
+  // tail lights — they bloom red and throw light onto the road when braking
+  const braking = arrival * arrival;
+  const tail = braking > 0.02 ? `255,${Math.round(60 - braking * 45)},${Math.round(80 - braking * 60)}` : '255,110,130';
   const tw = w * 0.155, th = w * 0.105;
   for (const s of [-1, 1]) {
     const lx = bx + s * (w / 2 - tw - w * 0.055);
     const ly = bodyTop + w * 0.085;
-    const g = ctx.createRadialGradient(lx + tw / 2, ly + th / 2, 0, lx + tw / 2, ly + th / 2, tw * 2.4);
-    g.addColorStop(0, 'rgba(255,110,130,.85)');
-    g.addColorStop(1, 'rgba(255,110,130,0)');
+    const glow = tw * (2.4 + braking * 2.6);
+    const g = ctx.createRadialGradient(lx + tw / 2, ly + th / 2, 0, lx + tw / 2, ly + th / 2, glow);
+    g.addColorStop(0, `rgba(${tail},${0.85 + braking * 0.15})`);
+    g.addColorStop(1, `rgba(${tail},0)`);
     ctx.fillStyle = g;
-    ctx.fillRect(lx - tw * 1.9, ly - tw * 1.9, tw * 4.8, tw * 4.8);
-    ctx.fillStyle = '#ff6e82';
+    ctx.fillRect(lx - glow, ly - glow, glow * 2, glow * 2);
+    ctx.fillStyle = `rgb(${tail})`;
     ctx.beginPath();
     ctx.roundRect(lx, ly, tw, th, th * 0.45);
     ctx.fill();
@@ -568,7 +607,7 @@ function drawCar(S, p) {
   ctx.beginPath();
   ctx.roundRect(bx - w * 0.10, bodyTop + w * 0.255, w * 0.20, w * 0.075, w * 0.012);
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,215,154,.85)';
+  ctx.fillStyle = `rgba(255,215,154,${0.85 + braking * 0.15})`;
   ctx.font = `500 ${Math.max(7, w * 0.052)}px Inter, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('♥ 2US', bx, bodyTop + w * 0.294);
@@ -581,9 +620,51 @@ function drawCar(S, p) {
   ctx.restore();
 }
 
+function drawCar(S, p) {
+  // reflection first — it lives on the tarmac, under the car
+  const wet = clamp(nightness(p) * 0.8 + arrival * 0.35, 0, 1);
+  if (wet > 0.04 && !REDUCED) {
+    paintCar(S, p, 0.20 * wet, true);
+    const fade = ctx.createLinearGradient(0, H, 0, H * 0.80);
+    fade.addColorStop(0, `rgba(0,0,0,${0.5 * wet})`);
+    fade.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fade;
+    ctx.fillRect(cx - W * 0.3, H * 0.80, W * 0.6, H * 0.2);
+  }
+  paintCar(S, p, 1, false);
+}
+
+/* ── night: bugs and dust in the headlights ──────────────────── */
+
+const MOTES = Array.from({ length: 34 }, (_, i) => ({
+  x: hash(i * 3 + 1), y: hash(i * 7 + 2), s: hash(i * 11 + 3), p: hash(i * 13 + 4) * 6.283,
+}));
+
+function drawMotes(p) {
+  const nk = nightness(p) * (1 - arrival * 0.6);
+  if (nk < 0.04 || REDUCED) return;
+  const t = Date.now() / 1000;
+  ctx.globalCompositeOperation = 'lighter';
+  for (const m of MOTES) {
+    const x = (m.x + Math.sin(t * 0.35 + m.p) * 0.06) * W;
+    const y = (m.y + Math.cos(t * 0.27 + m.p) * 0.05) * H;
+    const r = (0.7 + m.s * 2.1) * (1 + nk * 0.5);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.2);
+    g.addColorStop(0, `rgba(255,236,200,${0.30 * nk})`);
+    g.addColorStop(1, 'rgba(255,236,200,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r * 3.2, y - r * 3.2, r * 6.4, r * 6.4);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
 /* ── one frame ───────────────────────────────────────────────── */
 
 function render(dt) {
+  // arrival ramps over the last few percent of the page
+  const wantArrival = smooth(clamp((journey - 0.90) / 0.085, 0, 1));
+  arrival += (wantArrival - arrival) * Math.min(1, dt * 1.6);
+
   // steering: the camera chases the centreline, and banks into the bend
   const lead = 46;
   camX += (roadX(drive + lead) - camX) * Math.min(1, dt * 2.1);
@@ -611,6 +692,7 @@ function render(dt) {
   ctx.restore();
 
   drawCar(S, journey);
+  drawMotes(journey);
 
   // speed rush at the edges when she scrolls hard
   if (boost > 0.35 && !REDUCED) {
@@ -639,6 +721,12 @@ function onScroll() {
   journey = clamp(y / max, 0, 1);
 
   document.getElementById('progressFill').style.width = (journey * 100).toFixed(2) + '%';
+
+  // odometer — the page is a drive, so show the distance covered
+  const odo = document.getElementById('odoNow');
+  const odoBox = document.querySelector('.odo');
+  if (odo) odo.textContent = String(Math.round(drive / 10)).padStart(3, '0');
+  if (odoBox) odoBox.classList.toggle('stopped', arrival > 0.5);
 }
 addEventListener('scroll', onScroll, { passive: true });
 addEventListener('resize', onScroll, { passive: true });
@@ -648,18 +736,27 @@ function frame(now) {
   const dt = Math.min((now - prevT) / 1000, 0.05);
   prevT = now;
 
-  // the world keeps rolling on its own; scrolling pushes it harder
-  const speed = 16 + boost * 30;
+  // the world keeps rolling on its own; scrolling pushes it harder —
+  // then it slows to a stop as she reaches the end of the journey
+  const coast = 1 - arrival;
+  const speed = (16 + boost * 30) * (0.06 + 0.94 * coast);
+  speedNow = speed;
   drive += speed * dt;
   boost = Math.max(0, boost - dt * 1.9);
 
+  updateChapters();
   updateDepth();
   render(dt);
   requestAnimationFrame(frame);
 }
 
-/* Reduced motion: paint one still frame, never animate the road. */
-if (REDUCED) { updateDepth(); render(0.016); }
+/* Reduced motion: one still frame, and the page goes back to plain
+   top-to-bottom scrolling — a pinned 3D runway would trap the content. */
+if (REDUCED) {
+  body.classList.add('reduced');
+  updateDepth();
+  render(0.016);
+}
 else requestAnimationFrame(frame);
 
 /* ── pointer parallax: lean the world toward the cursor ───────── */
@@ -673,6 +770,70 @@ function initPointer() {
 }
 safe('pointer parallax', initPointer);
 
+/* ───────────────────────────────────────────────────────────────
+   2b.  THE RUNWAY — scroll is the throttle, the camera moves forward
+   ───────────────────────────────────────────────────────────────
+   Scrolling doesn't scroll a page; it drives us down the road. Each
+   chapter is pinned and flies out of the distance, up to the camera,
+   and past it — so she drives through her own story.               */
+
+const STAGE_SEL = '.hero-inner, .section > .wrap, .stop > .wrap';
+
+let chapters = [];
+
+function cacheChapters() {
+  chapters = [];
+  document.querySelectorAll(STAGE_SEL).forEach(stage => {
+    const host = stage.parentElement;
+    if (!host) return;
+    let top = 0, p = host;
+    while (p) { top += p.offsetTop; p = p.offsetParent; }
+    chapters.push({ host, stage, top, h: host.offsetHeight || 1, lastZ: null });
+  });
+}
+
+function updateChapters() {
+  if (!chapters.length) return;
+  const vh = innerHeight;
+  const lastIdx = chapters.length - 1;
+
+  for (let i = 0; i < chapters.length; i++) {
+    const c = chapters[i];
+
+    // how far she is through this chapter, 0 → 1
+    const span = Math.max(1, c.h - vh);
+    const p = clamp((scrollY - c.top) / span, 0, 1);
+
+    // The landing page can't fly in from somewhere — there is no scroll
+    // above it — so the first chapter starts at the camera and drifts past.
+    const isFirst = i === 0;
+
+    // everything else arrives out of the distance, reaches us, goes past
+    const z = isFirst ? lerp(0, -180, p) : lerp(1500, -180, p);
+
+    // a touch of roll so it reads as motion, not as a slideshow
+    const tilt = lerp(5.5, -2.0, p);
+    const lift = lerp(-2.2, 1.2, p);
+
+    // Fade IN only. Fading out would blank the screen: the chapter keeps
+    // scrolling up and off after its run ends, and that exit should be seen.
+    const vis = isFirst ? 1 : clamp((p - 0.005) / 0.14, 0, 1);
+
+    // always write the transform: 12 writes a frame is nothing, and it stops
+    // a chapter scrolling back out of view from keeping a stale position
+    c.stage.style.transform =
+      `translate3d(0, ${lift.toFixed(2)}%, ${z.toFixed(1)}px) rotateX(${tilt.toFixed(2)}deg)`;
+    c.stage.style.opacity = vis.toFixed(3);
+
+    // Stop invisible panels from swallowing clicks — but the final chapter
+    // never leaves, so its links and buttons must stay live at p = 1.
+    const live = p > 0.02 && (i === lastIdx || p < 0.995);
+    if (c.live !== live) {
+      c.live = live;
+      c.stage.style.pointerEvents = live ? '' : 'none';
+    }
+  }
+}
 /* ───────────────────────────────────────────────────────────────
    3.  3D DEPTH — every block rises and tilts as it crosses the screen
    ─────────────────────────────────────────────────────────────── */
@@ -715,9 +876,15 @@ const revealIO = new IntersectionObserver((entries) => {
 function initReveals() {
   document.querySelectorAll('.reveal').forEach(el => revealIO.observe(el));
   cacheDepth();
-  addEventListener('resize', cacheDepth, { passive: true });
-  // the cache is layout-dependent, so refresh once the fonts/images settle
-  addEventListener('load', cacheDepth, { once: true });
+  cacheChapters();
+  updateChapters();
+  addEventListener('resize', () => { cacheDepth(); cacheChapters(); }, { passive: true });
+  // the cache is layout-dependent, so refresh once fonts/images settle
+  addEventListener('load', () => { cacheDepth(); cacheChapters(); }, { once: true });
+  // images decoding late change the height of their chapter
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => { cacheDepth(); cacheChapters(); }).catch(() => {});
+  }
 }
 
 /* ───────────────────────────────────────────────────────────────
@@ -1117,6 +1284,36 @@ function initPlaylist() {
   if (note) note.hidden = true;
 }
 
+/* ───────────────────────────────────────────────────────────────
+   9b.  THE ENVELOPE — she opens it herself
+   ─────────────────────────────────────────────────────────────── */
+
+function initEnvelope() {
+  const env  = document.getElementById('envelope');
+  const btn  = document.getElementById('envelopeBtn');
+  const body = document.getElementById('letterBody');
+  if (!env || !btn || !body) return;
+
+  let opened = false;
+  btn.addEventListener('click', () => {
+    opened = !opened;
+    env.classList.toggle('opened', opened);
+    btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
+
+    if (opened) {
+      body.hidden = false;
+      // let the flap start turning before the letter rises out of it
+      setTimeout(() => {
+        body.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' });
+        // the reveal observer only fires once; re-arm for the new content
+        body.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
+      }, 420);
+    } else {
+      body.hidden = true;
+    }
+  });
+}
+
 function initMisc() {
   onScroll();
   addEventListener('scroll', updateMap, { passive: true });
@@ -1147,6 +1344,7 @@ function initMisc() {
    ─────────────────────────────────────────────────────────────── */
 
 safe('reveals',       initReveals);
+safe('envelope',      initEnvelope);
 safe('playlist',      initPlaylist);
 safe('hearts',       initHearts);
 safe('photo tilt',   initTilt);
