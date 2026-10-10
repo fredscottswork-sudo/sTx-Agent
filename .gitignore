@@ -8,3 +8,6 @@ test/node_modules/
 
 # macOS
 .DS_Store
+# test scaffolding
+test/package.json
+test/package-lock.json
