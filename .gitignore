@@ -1,16 +1,10 @@
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-build/
-dist/
-coverage/
-htmlcov/
+# node
+node_modules/
+npm-debug.log*
+package-lock.json
 
-# Local configuration and run data (the example config is tracked).
-stx.config.toml
-.stx/
+# test scratch
+test/node_modules/
+
+# macOS
+.DS_Store

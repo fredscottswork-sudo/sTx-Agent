@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 
-const SITE = '/home/user/sTx-Agent/love-site';
+const SITE = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(SITE, 'index.html'), 'utf8');
 const js   = fs.readFileSync(path.join(SITE, 'script.js'), 'utf8');
 

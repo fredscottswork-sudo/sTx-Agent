@@ -1,91 +1,166 @@
-# STX Agent
+# For Gloria Colete 💗
 
-**Build. Execute. Verify. Improve.**
+A single-page love letter disguised as an endless road trip. Scroll to drive — the
+world carries you from dawn to midnight, and the words arrive at each stop.
 
-STX Agent is a self-hosted, policy-aware engineering-agent foundation from **ScottsTechX Enterprises (U) Ltd**. It is modular and auditable, but it is not an unrestricted or fully sandboxed autonomous system. Tool permissions are enforced by the host runtime; provider-side moderation and limits remain outside STX's control.
+**You do NOT need Google Drive for this.** See [Adding photos](#adding-photos).
 
-## Current implementation
+---
 
-The repository now includes a Python CLI and a local task dashboard with:
-
-- Named model profiles with **OpenAI-compatible** and native **Anthropic Messages API** adapters; API keys are read from environment variables.
-- A bounded model/tool loop, explicit routing, structured metadata events, and safe workspace-scoped file operations.
-- Direct-argv terminal execution (`shell=False`), read-only Git tools, policy-gated writes and commands, approval requests, dry-run, time/output limits, and cancellation.
-- Incremental SQLite repository metadata/symbol indexing and bounded lexical context retrieval.
-- Explicit local project memories with search, user approval for writes/deletes, and expiry. The agent does not write memory automatically.
-- A responsive multi-page local control center with live task/approval management, per-task model selection, cancellation, and confirmed deletion of finished history.
-- Owner-facing management for explicit memory and the local project index, plus read-only views of provider readiness, active permissions, built-in tools, retention limits, and security-audit findings.
-- A read-only `stx audit` command with stable check IDs, JSON output, and a strict mode for CI; it does not auto-fix settings or inspect OS-level ACLs.
-- Optional HTTPS text fetching restricted to configured hostnames, public DNS addresses, bounded responses, and explicit confirmation. Fetched content is treated as untrusted input.
-
-**Not yet implemented:** MCP transport, headless browser automation, arbitrary external plugin loading, native provider-specific adapters beyond OpenAI-compatible and Anthropic APIs, multi-agent orchestration, and OS/container sandbox isolation. This agent cannot override a model provider's safety rules, access, or content policy. “Uncensored” behavior is not promised. See the [capability matrix](docs/capability-matrix.md) and [platform notes](docs/platforms.md) for exact scope and limitations.
-
-## Requirements and installation
-
-- Python 3.11+
-- Git for Git tools
-- No third-party Python runtime dependencies
-- A configured OpenAI-compatible or Anthropic endpoint and its required credentials for model-backed `run` tasks; local inspection, indexing, audits, and tests do not need model credentials
+## Run it locally
 
 ```bash
-python -m pip install -e .
-stx init
-# Export the environment variable named by api_key_env; never put the key in TOML.
-export OPENAI_API_KEY="..."    # Linux, macOS, Termux shells
-stx doctor
+python3 -m http.server 4173
+# open http://localhost:4173
 ```
 
-Windows PowerShell example for a process-scoped key:
+Any static server works. There is no build step and no dependencies.
 
-```powershell
-$env:OPENAI_API_KEY = "..."
-stx doctor
-```
+---
 
-You can instead copy `stx.config.example.toml` to `stx.config.toml` and edit it. `stx init` never overwrites an existing file. Local config and `.stx/` data are excluded from Git by default. See [platform-specific instructions](docs/platforms.md).
+## Adding photos
 
-## Commands
+Photos live in `photos/`. They are **WebP**, cropped to 4:5 (the polaroid
+aspect) and sized for the web, so the page stays fast.
+
+| File | Where it appears |
+|---|---|
+| `hero.webp` | Her portrait, top of the page |
+| `01.webp` | Stop 1 — "the day it started" |
+| `02.webp` | Stop 2 — "windows down, no complaints" |
+| `03.webp` | Stop 3 — "no skip, ever" |
+| `04.webp` | Stop 4 — "3% battery, 100% happy" |
+| `05.webp` | Stop 5 — "any road, as long as it's ours" |
+| `06.webp` | Gallery — "five more minutes" |
+| `07.webp` | Gallery — "the outfit in question" |
+| `08.webp` | Gallery — "the day we all turned up" |
+| `09.webp` | Gallery — "the blue-hour version of you" |
+| `10.webp` | Gallery — "caught mid-joke" |
+
+**Any missing photo is fine.** Empty slots fall back to a tinted gradient with a
+small ♡ — they read as "waiting for a better photo of you", not as a broken image.
+
+### Replacing one
 
 ```bash
-stx inspect                         # workspace summary, no model request
-stx doctor                          # local runtime/configuration check
-stx audit --json                    # read-only policy and storage posture report
-stx index                           # incrementally index files and symbols
-stx search checkout retries         # index, then search paths/symbols/source
-stx run "Explain how checkout works" # interactive policy-gated model/tool loop
-stx run --profile coding "..."     # select an explicitly configured profile
-stx run --dry-run "..."            # preview proposed writes/commands
-stx serve                           # local dashboard and task API on 127.0.0.1:8765
-python -m unittest discover -s tests -v
+cd photos
+convert YOUR_NEW_PHOTO.jpg -gravity north -resize 1200x1500^ -extent 1200x1500 \
+        -strip -quality 78 06.webp
 ```
 
-The model router only selects configured profiles, uses small transparent keyword heuristics, and can be overridden with `--profile`. The control center is available at `http://127.0.0.1:8765/` while `stx serve` is running. It provides task and approval actions, memory/index management, a read-only audit, and a read-only view of active configuration; it does not edit TOML or install providers/plugins. Only one dashboard/task server may hold a workspace lock at a time. It has no login on loopback; do not expose it to a network without a strong `STX_API_TOKEN` and a TLS-terminating reverse proxy. The static UI can load to collect the token, but API data/actions require bearer authentication. The built-in HTTP server does not provide TLS.
+- `-gravity` picks which part survives the crop: `north` for portraits where the
+  face is high up, `center` for full-body shots, `south` if her face is at the bottom.
+- `1200x1500` is 4:5 — matching it means the browser never crops awkwardly.
+- JPEG works too, just change the `src` extension in `index.html`.
 
-## Permissions, data, and limits
+---
 
-The sample policy allows ordinary workspace reads and Git reads, denies sensitive-file reads, and requires confirmation for writes, terminal commands, memory changes, and network fetches. Unlisted capabilities are denied. Review `stx.config.toml` before relaxing policy. `stx run --yes` approves every confirmable action and is unsafe for untrusted workspaces.
+## Adding videos
 
-Terminal execution uses an argv array, `shell=False`, a scrubbed child environment, bounded output/time, and process cleanup. It can still run arbitrary project code; **it is not an OS/container sandbox**. Windows process-tree termination and filesystem permission semantics differ from POSIX. Read [security notes](docs/architecture.md#security-and-technical-risks).
+Clips live in `videos/`, named `clip-01.mp4` … `clip-08.mp4`. They appear
+as the playlist under the main player — click any clip to swap it in.
 
-The local `.stx/` directory can contain SQLite index metadata, explicitly saved memories, task prompts/results, and approval details. POSIX permissions are tightened where available; on Windows, protect the workspace with NTFS ACLs. Task history is bounded by `[tasks]` retention settings. Memory has its own expiry setting. Do not store secrets in tasks or memories.
+To change the list, edit `CLIPS` near the bottom of `script.js`:
 
-Optional `web.fetch` is off by default. To enable it, set `[network].enabled = true`, add exact hostnames or `*.subdomain.example` patterns to `[network].allowed_hosts`, and retain `"network.fetch" = "confirm"`. It only fetches public HTTPS text on port 443, blocks non-public DNS addresses and unapproved redirects, and does not send cookies or authorization headers. It is not a general browser or private-network client.
+```js
+const CLIPS = [
+  { src: 'videos/clip-01.mp4', cap: 'the one that started it' },
+  { src: 'videos/clip-02.mp4', cap: 'you, mid-sentence' },
+  // ...
+];
+```
 
-## Configuration and providers
+- The `cap` is the handwritten caption under the player — make them personal.
+- Durations are read automatically from each file.
+- Vertical phone clips automatically get a vertical frame, so nothing is letterboxed.
+- The player pauses itself when she scrolls away, so it never shouts over the rest.
 
-TOML config supports named providers/profiles, autonomy, explicit capability permissions, tool-step limits, index/memory settings, network host allowlists, task retention, and opt-in metadata-only logs. Native adapters are available for the OpenAI-compatible chat-completions/tool-call shape and Anthropic's Messages API; keys remain in environment variables. Provider endpoint redirects are refused so prompts and keys are not forwarded to an unreviewed host. Local compatible servers can be used when their endpoints match the adapter. Non-loopback HTTP is refused unless the provider explicitly opts into insecure HTTP. The Anthropic adapter uses a bounded 4,096-token response budget and rejects temperatures above 1.
+**Keep total video under ~15 MB** so it loads quickly on her phone.
 
-Run `stx audit` to inspect policy and local storage posture without contacting a model or changing files; use `--json` for automation and `--strict` to fail on warnings. The audit is a configuration review, not a sandbox or a complete operating-system security scanner.
+---
 
-See [the example config](stx.config.example.toml), [architecture](docs/architecture.md), [capability matrix](docs/capability-matrix.md), [platform notes](docs/platforms.md), and the [Hermes/OpenClaw comparative review](docs/comparative-analysis.md).
+## Changing the words
 
-## Tests and verification
+Everything personal lives in `index.html` as plain text:
 
-Run the standard-library suite with:
+- Her name — in `<title>`, the `<h1>`, and the boarding-pass `passenger` row.
+- The five stories — inside `<article class="stop">`.
+- The gallery captions — the `<figcaption>` under each `.shot`.
+- The letter — the `<ul class="hand">` list.
+- The closing — the `#ticket` section.
+
+### A few tips
+
+- Keep her name as `Gloria&nbsp;Colete` in the headline so it never wraps mid-name.
+- The hero uses `<em>` for the second line — that's what gets the peach→lilac gradient.
+- If you add a stop, duplicate a whole `<article class="stop">` block, give the copy
+  an `id="stop-6"`, then add it to the `STOPS` array in `script.js`.
+
+---
+
+## Deploying to Vercel
+
+**Easiest — drag and drop:**
+
+1. Go to [vercel.com/new](https://vercel.com/new) → **Project** → *Upload…*
+2. Drag the repository folder onto the page.
+3. Deploy. Done — no framework preset, no build command.
+
+**Or with the CLI:**
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests -v
-python -m compileall -q src tests
+npm i -g vercel
+vercel          # preview
+vercel --prod   # the real one
 ```
 
-Unit/integration tests use temporary workspaces, fake model responses, and local HTTP servers; they do not make hosted-model requests. GitHub Actions is configured for Linux and Windows on Python 3.11 and 3.12. Termux/Android is documented as a target but is not available as a hosted CI runner here, so compatibility there still needs a real-device run.
+Or connect the repo itself — **Settings → Git → Connect**, pick this branch.
+No build command, no framework preset: Vercel serves the files as they are.
+
+Because it's a plain static bundle, it deploys in seconds and costs nothing.
+
+---
+
+## What's actually going on
+
+- **Scrolling doesn't scroll the page — it drives.** Each memory is a chapter on the
+  road ahead: pinned, then flying out of the distance, up to the camera and past it,
+  while the landscape rolls underneath. You drive through her story rather than down a
+  document. The landing chapter starts at the camera, because there's no scroll above it.
+- **The road is genuinely 3D.** The centreline is a world-space curve that swings ~22m
+  sideways and rolls ~8m over hills, projected to the canvas every frame. The camera
+  lags the centreline (that's the steering) and banks into the bends — the world tilts,
+  the sky doesn't. Lane lines, rumble strips, trees and lamps all follow it.
+- **The whole page has depth.** Every text block and photo rises, tilts and parallaxes
+  as it crosses the screen, on a real `perspective` stage. Photos lift toward you on
+  hover; the boarding pass turns on a vertical axis.
+- **The cursor bends the world** — move the mouse and the vanishing point leans.
+- **Time of day** is driven by scroll position: dawn at the top, midday in the middle,
+  golden hour at the gallery, stars by the letter.
+- **The music** is synthesised live with the Web Audio API (a four-chord pad). There is
+  no audio file — the top-right button starts and stops it.
+- **The route map** inks itself in as you scroll, and each pin lights up when you reach
+  that stop.
+- **Photos** are cropped to 4:5 and lean toward the cursor as you move over them.
+- **Every feature is isolated**, so if one fails (an odd browser, a missing file) the
+  rest of the page still works.
+- **You arrive.** The whole page is a drive, so it ends with one: as she reaches the
+  last chapter the car slows to a stop, the brake lights bloom and the headlight beam
+  narrows. The odometer in the corner turns over.
+- Respects `prefers-reduced-motion`: a single still frame instead of an endless road,
+  and the 3D runway is switched off entirely so nobody gets text trapped in a viewport.
+
+---
+
+## Tests
+
+```bash
+python3 -m http.server 4173 &     # the test expects a server on :4173
+cd test
+npm init -y && npm i jsdom
+node smoke.test.js
+```
+
+Boots the real `index.html` and `script.js` in a simulated DOM and checks the loader,
+reveals, map maths, counters, audio, the video playlist, that every photo URL actually
+resolves, and that no `NaN` ever reaches the canvas across a full dawn-to-night sweep.
