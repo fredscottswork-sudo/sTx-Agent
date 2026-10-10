@@ -1,80 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>For Gloria Colete — take the long way</title>
-<meta name="description" content="A small road, made for one person. Five stops, one very questionable playlist, zero reason to hurry." />
-<meta property="og:title" content="Gloria Colete, you make detours worth taking." />
-<meta property="og:description" content="A small road, made for one person." />
-<meta name="theme-color" content="#150c22" />
+<meta name="description" content="A small road, made for one person. Five stops, one very questionable playlist, zero reason to hurry.">
+<meta name="theme-color" content="#150c22">
 
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300;400;500;600&family=Caveat:wght@500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css" />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💗</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300;400;500;600&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%92%97</text></svg>">
 </head>
 <body>
 
-<!-- ─────────────────────────  SCENE  ───────────────────────── -->
+<!-- ── the world behind everything ─────────────────────────── -->
 <canvas id="scene" aria-hidden="true"></canvas>
-<div class="vignette" aria-hidden="true"></div>
+<div class="scrim" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
-<div class="hearts" id="hearts" aria-hidden="true"></div>
+<div class="motes" id="motes" aria-hidden="true"></div>
 
-<!-- ─────────────────────────  LOADER  ───────────────────────── -->
+<!-- ── loader ───────────────────────────────────────────────── -->
 <div class="loader" id="loader">
-  <div class="loader-inner">
-    <p class="loader-eyebrow">loading the good part</p>
-    <div class="loader-bar"><i id="loaderFill"></i></div>
-    <p class="loader-note">warming up the engine…</p>
-  </div>
+  <p class="loader-note">warming up the engine</p>
+  <div class="loader-bar"><i id="loaderFill"></i></div>
 </div>
 
-<!-- ─────────────────────────  HUD  ───────────────────────── -->
+<!-- ── heads-up display ─────────────────────────────────────── -->
+<div class="hud">
+  <div class="odo"><b id="odoNow">000</b><span>/ ∞</span></div>
+  <button class="sound" id="soundBtn" type="button" aria-pressed="false">
+    <span class="sound-ico" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="sound-label">road song</span>
+  </button>
+</div>
 <div class="progress" aria-hidden="true"><i id="progressFill"></i></div>
-<div class="odo" aria-hidden="true"><b id="odoNow">000</b><span>/ ∞</span></div>
-<button class="sound" id="soundBtn" type="button" aria-pressed="false" title="Play a soft little road song">
-  <span class="sound-ico" aria-hidden="true"><i></i><i></i><i></i></span>
-  <span class="sound-label">road song</span>
-</button>
 
-<main id="main">
+<main>
 
-  <!-- ═══════════════ HERO ═══════════════ -->
-  <header class="hero" id="home">
-    <div class="hero-inner">
-      <div class="hero-card reveal" data-tilt data-tilt-base="-2.2">
+  <!-- ═══════ 1 · DEPARTURE ═══════ -->
+  <header class="run" id="home">
+    <div class="stage stage-hero">
+      <figure class="polaroid hero-card" data-tilt data-tilt-base="-2.2">
         <div class="photo">
-          <img src="photos/hero.webp" alt="Gloria, smiling in the golden hour" fetchpriority="high" decoding="async" />
+          <img src="photos/hero.webp" alt="Gloria, smiling in the golden hour" fetchpriority="high" decoding="async">
         </div>
-        <p class="hero-card-cap">the reason for the route</p>
-      </div>
-      <p class="eyebrow reveal">a small road, made for one person</p>
-      <h1 class="reveal">
-        Gloria&nbsp;Colete,<br />
-        <em>you make detours<br />worth taking.</em>
-      </h1>
+        <figcaption>the reason for the route</figcaption>
+      </figure>
+      <p class="kicker reveal">a small road, made for one person</p>
+      <h1 class="reveal">Gloria&nbsp;Colete,<br><em>you make detours<br>worth taking.</em></h1>
       <p class="lede reveal">Five stops. Eight videos. One very questionable playlist.
-        Zero reason to hurry. Scroll to drive — I'll handle the steering, you bring the laugh.</p>
-      <div class="hero-actions reveal">
-        <a class="btn btn-primary" href="#route">Start the engine</a>
-        <span class="hero-hint">sound on, if you like&nbsp;♥</span>
-      </div>
+        Zero reason to hurry. Scroll to drive — I'll steer, you bring the laugh.</p>
+      <a class="btn reveal" href="#route">Start the engine</a>
       <div class="scroll-cue" aria-hidden="true"><i></i><span>scroll to drive</span></div>
     </div>
   </header>
 
-  <!-- ═══════════════ ROUTE MAP ═══════════════ -->
-  <section class="section section-route" id="route">
-    <div class="wrap">
+  <!-- ═══════ 2 · THE ROUTE ═══════ -->
+  <section class="run" id="route">
+    <div class="stage">
       <p class="kicker reveal">the route</p>
-      <h2 class="reveal">We don't have a map.<br />We have a habit of getting a little lost.</h2>
-      <p class="body reveal">Pick a stop. Or don't — let the road decide.</p>
-
-      <div class="map-wrap reveal">
-        <svg class="map" id="mapSvg" viewBox="0 0 900 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="A winding road with five stops marked along it">
+      <h2 class="reveal">We don't have a map.<br>We have a habit of getting lost.</h2>
+      <div class="map-card reveal">
+        <svg id="mapSvg" viewBox="0 0 900 340" role="img" aria-label="A winding road with five stops marked along it">
           <defs>
             <linearGradient id="roadGrad" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0%" stop-color="#ffb37a" />
@@ -82,183 +71,166 @@
               <stop offset="100%" stop-color="#a58bff" />
             </linearGradient>
           </defs>
-          <path id="mapShadow" d="M40,272 C150,272 150,206 260,206 S370,268 462,268 S560,150 660,150 S770,214 862,214"
-                fill="none" stroke="rgba(0,0,0,.45)" stroke-width="13" stroke-linecap="round" />
-          <path id="mapBase" d="M40,272 C150,272 150,206 260,206 S370,268 462,268 S560,150 660,150 S770,214 862,214"
-                fill="none" stroke="rgba(255,255,255,.16)" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 9" />
-          <path id="mapPath" d="M40,272 C150,272 150,206 260,206 S370,268 462,268 S560,150 660,150 S770,214 862,214"
-                fill="none" stroke="url(#roadGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="4 0" />
+          <path id="mapShadow" d="M40,272 C150,272 150,206 260,206 S370,268 462,268 S560,150 660,150 S770,214 862,214" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="13" stroke-linecap="round" />
+          <path id="mapBase"   d="M40,272 C150,272 150,206 260,206 S370,268 462,268 S560,150 660,150 S770,214 862,214" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 9" />
+          <path id="mapInk"    d="M40,272 C150,272 150,206 260,206 S370,268 462,268 S560,150 660,150 S770,214 862,214" fill="none" stroke="url(#roadGrad)" stroke-width="7" stroke-linecap="round" />
           <g id="mapPins"></g>
         </svg>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════ STOPS ═══════════════ -->
-  <div class="stops" id="stops">
-
-    <article class="stop" id="stop-1">
-      <div class="wrap stop-grid">
-        <div class="stop-text">
-          <p class="km reveal"><span class="km-n">km 0</span><span class="km-dot"></span><span>where the road noticed us</span></p>
-          <h3 class="reveal">The one that got away</h3>
-          <p class="body reveal">I was driving with no destination and the windows down, genuinely convinced I had the whole thing figured out. Then <em>you</em>. One ridiculous hello, one laugh that made me miss a turn entirely — and suddenly the little screen on my dashboard felt far too small for how much there was to see.</p>
-          <p class="body reveal">I have never been so grateful for being lost.</p>
-        </div>
-        <figure class="polaroid reveal" data-tilt>
-          <div class="photo">
-            <img src="photos/01.webp" alt="Fresh hair, big smile — the day it started" loading="lazy" decoding="async" onerror="this.style.display='none'" />
-            <span class="photo-tag">01</span>
-          </div>
-          <figcaption>the day it started</figcaption>
-        </figure>
+  <!-- ═══════ 3–7 · THE STOPS ═══════ -->
+  <section class="run" id="stop-1">
+    <div class="stage stage-split">
+      <div>
+        <p class="km reveal"><span>km 0</span><span>where the road noticed us</span></p>
+        <h3 class="reveal">The one that got away</h3>
+        <p class="body reveal">I was driving with no destination and the windows down, genuinely
+          convinced I had the whole thing figured out. Then <em>you</em>. One ridiculous hello,
+          one laugh that made me miss a turn entirely — and suddenly the screen on my
+          dashboard felt far too small for how much there was to see.</p>
+        <p class="body reveal">I have never been so grateful for being lost.</p>
       </div>
-    </article>
-
-    <article class="stop stop-flip" id="stop-2">
-      <div class="wrap stop-grid">
-        <div class="stop-text">
-          <p class="km reveal"><span class="km-n">km 143</span><span class="km-dot"></span><span>the long way round</span></p>
-          <h3 class="reveal">Two extra hours, best afternoon of the year</h3>
-          <p class="body reveal">We took the wrong exit on purpose. Bad directions, better company, windows down, one playlist that has been completely ruined for everyone else ever since.</p>
-          <p class="body reveal">If I ever reach a fork in the road, I already know what I'm doing. I'm picking whichever one has you in it.</p>
-        </div>
-        <figure class="polaroid reveal" data-tilt>
-          <div class="photo">
-            <img src="photos/02.webp" alt="You in the white dress, out for the day" loading="lazy" decoding="async" onerror="this.style.display='none'" />
-            <span class="photo-tag">02</span>
-          </div>
-          <figcaption>windows down, no complaints</figcaption>
-        </figure>
-      </div>
-    </article>
-
-    <article class="stop" id="stop-3">
-      <div class="wrap stop-grid">
-        <div class="stop-text">
-          <p class="km reveal"><span class="km-n">km 301</span><span class="km-dot"></span><span>volume up</span></p>
-          <h3 class="reveal">The song that ruined all other songs</h3>
-          <p class="body reveal">Play it in the car and you'll know. Some songs are just background noise — and then one day they become <em>ours</em>, and every other song on the playlist sounds slightly wrong without you in it.</p>
-          <p class="body reveal">Four notes. That's all it takes. I could be in a crowd of ten thousand people and still find you in three.</p>
-        </div>
-        <figure class="polaroid reveal" data-tilt>
-          <div class="photo">
-            <img src="photos/03.webp" alt="You with the gold eyeshadow" loading="lazy" decoding="async" onerror="this.style.display='none'" />
-            <span class="photo-tag">03</span>
-          </div>
-          <figcaption>no skip, ever</figcaption>
-        </figure>
-      </div>
-    </article>
-
-    <article class="stop stop-flip" id="stop-4">
-      <div class="wrap stop-grid">
-        <div class="stop-text">
-          <p class="km reveal"><span class="km-n">km 458</span><span class="km-dot"></span><span>the night it ran out of battery</span></p>
-          <h3 class="reveal">Empty tank, no signal, still laughing</h3>
-          <p class="body reveal">It was cold and dark and the car decided to give up halfway through nowhere. None of it was the plan — and it turned out to be one of my favourite memories I have.</p>
-          <p class="body reveal">A note to future me, written on a phone at 3% : <em>the engine is never the point. The passenger is the point.</em></p>
-        </div>
-        <figure class="polaroid reveal" data-tilt>
-          <div class="photo">
-            <img src="photos/04.webp" alt="You in black and white, close up" loading="lazy" decoding="async" onerror="this.style.display='none'" />
-            <span class="photo-tag">04</span>
-          </div>
-          <figcaption>3% battery, 100% happy</figcaption>
-        </figure>
-      </div>
-    </article>
-
-    <article class="stop" id="stop-5">
-      <div class="wrap stop-grid">
-        <div class="stop-text">
-          <p class="km reveal"><span class="km-n">km ∞</span><span class="km-dot"></span><span>no exit on this one</span></p>
-          <h3 class="reveal">Home is just wherever you've parked</h3>
-          <p class="body reveal">Same old car. Same old road. Completely different everything. I'd drive the long way forever, every single time, as long as the view kept being you.</p>
-          <p class="body reveal">You took my scattered route and turned it into a destination. I'd do it all again tomorrow, and I'd still be the first to blame you for the wrong turn.</p>
-        </div>
-        <figure class="polaroid reveal" data-tilt>
-          <div class="photo">
-            <img src="photos/05.webp" alt="You laughing with both hands on your chest" loading="lazy" decoding="async" onerror="this.style.display='none'" />
-            <span class="photo-tag">05</span>
-          </div>
-          <figcaption>any road, as long as it's ours</figcaption>
-        </figure>
-      </div>
-    </article>
-
-  </div>
-
-  <!-- ═══════════════ DETOUR ═══════════════ -->
-  <section class="section section-detour" id="detour">
-    <div class="wrap">
-      <p class="kicker reveal">detour <span class="kicker-flare">★</span></p>
-      <h2 class="reveal">We got lost on purpose.</h2>
-      <p class="body reveal">Left the road entirely. Found a snack that was mostly wrapper, a sunset with no filter, and a drink that was somehow much too cold. You defended it to this day. You were right to.</p>
-      <div class="tally">
-        <div class="tally-item reveal"><b data-count="7">0</b><span>snacks consumed (of 9)</span></div>
-        <div class="tally-item reveal"><b data-count="14">0</b><span>detours taken</span></div>
-        <div class="tally-item reveal"><b data-count="42">0</b><span>times you said "five more minutes"</span></div>
-      </div>
-      <p class="body body-quip reveal">If you'd rather not know how far we went to find that one good bakery — too late. It's on the map now.</p>
+      <figure class="polaroid reveal" data-tilt>
+        <div class="photo"><img src="photos/01.webp" alt="Fresh hair, big smile — the day it started" loading="lazy" decoding="async"><i class="tag">01</i></div>
+        <figcaption>the day it started</figcaption>
+      </figure>
     </div>
   </section>
 
-  <!-- ═══════════════ GALLERY ═══════════════ -->
-  <section class="section section-gallery" id="gallery">
-    <div class="wrap">
+  <section class="run" id="stop-2">
+    <div class="stage stage-split">
+      <div>
+        <p class="km reveal"><span>km 143</span><span>the long way round</span></p>
+        <h3 class="reveal">Two extra hours, best afternoon of the year</h3>
+        <p class="body reveal">We took the wrong exit on purpose. Bad directions, better company,
+          windows down, one playlist that has been completely ruined for everyone else ever since.</p>
+        <p class="body reveal">If I ever reach a fork in the road, I already know what I'm doing.
+          I'm picking whichever one has you in it.</p>
+      </div>
+      <figure class="polaroid reveal flip" data-tilt>
+        <div class="photo"><img src="photos/02.webp" alt="You in the white dress, out for the day" loading="lazy" decoding="async"><i class="tag">02</i></div>
+        <figcaption>windows down, no complaints</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="run" id="stop-3">
+    <div class="stage stage-split">
+      <div>
+        <p class="km reveal"><span>km 301</span><span>volume up</span></p>
+        <h3 class="reveal">The song that ruined all other songs</h3>
+        <p class="body reveal">Play it in the car and you'll know. Some songs are just background
+          noise — and then one day they become <em>ours</em>, and every other song sounds
+          slightly wrong without you in it.</p>
+        <p class="body reveal">Four notes. That's all it takes. I could be in a crowd of ten
+          thousand people and still find you in three.</p>
+      </div>
+      <figure class="polaroid reveal" data-tilt>
+        <div class="photo"><img src="photos/03.webp" alt="You with the gold eyeshadow" loading="lazy" decoding="async"><i class="tag">03</i></div>
+        <figcaption>no skip, ever</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="run" id="stop-4">
+    <div class="stage stage-split">
+      <div>
+        <p class="km reveal"><span>km 458</span><span>the night it ran out of battery</span></p>
+        <h3 class="reveal">Empty tank, no signal, still laughing</h3>
+        <p class="body reveal">It was cold and dark and the car decided to give up halfway
+          through nowhere. None of it was the plan — and it turned out to be one of my
+          favourite memories I have.</p>
+        <p class="body reveal">A note to future me, written on a phone at 3% :
+          <em>the engine is never the point. The passenger is the point.</em></p>
+      </div>
+      <figure class="polaroid reveal flip" data-tilt>
+        <div class="photo"><img src="photos/04.webp" alt="You in black and white, close up" loading="lazy" decoding="async"><i class="tag">04</i></div>
+        <figcaption>3% battery, 100% happy</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="run" id="stop-5">
+    <div class="stage stage-split">
+      <div>
+        <p class="km reveal"><span>km ∞</span><span>no exit on this one</span></p>
+        <h3 class="reveal">Home is just wherever you've parked</h3>
+        <p class="body reveal">Same old car. Same old road. Completely different everything.
+          I'd drive the long way forever, every single time, as long as the view kept being you.</p>
+        <p class="body reveal">You took my scattered route and turned it into a destination.
+          I'd do it all again tomorrow, and I'd still blame you for the wrong turn.</p>
+      </div>
+      <figure class="polaroid reveal" data-tilt>
+        <div class="photo"><img src="photos/05.webp" alt="You laughing with both hands on your chest" loading="lazy" decoding="async"><i class="tag">05</i></div>
+        <figcaption>any road, as long as it's ours</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ═══════ 8 · DETOUR ═══════ -->
+  <section class="run" id="detour">
+    <div class="stage">
+      <p class="kicker reveal">detour</p>
+      <h2 class="reveal">We got lost on purpose.</h2>
+      <p class="body reveal">Left the road entirely. Found a snack that was mostly wrapper, a
+        sunset with no filter, and a drink that was somehow much too cold. You defended it to
+        this day. You were right to.</p>
+      <div class="tally">
+        <div class="tally-item reveal"><b data-count="7">0</b><span>snacks eaten (of nine)</span></div>
+        <div class="tally-item reveal"><b data-count="14">0</b><span>detours taken</span></div>
+        <div class="tally-item reveal"><b data-count="42">0</b><span>"five more minutes"</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 9 · GALLERY ═══════ -->
+  <section class="run" id="gallery">
+    <div class="stage">
       <p class="kicker reveal">the glovebox</p>
       <h2 class="reveal">Proof that I was paying attention.</h2>
-      <p class="body reveal">Every single one of these is a day I'd happily drive again.</p>
-
       <div class="grid-gallery">
-        <figure class="shot reveal" data-tilt><div class="photo"><img src="photos/06.webp" alt="You sitting on a bench in town" loading="lazy" decoding="async" onerror="this.style.display='none'" /><span class="photo-tag">06</span></div><figcaption>five more minutes</figcaption></figure>
-        <figure class="shot reveal" data-tilt><div class="photo"><img src="photos/07.webp" alt="That top" loading="lazy" decoding="async" onerror="this.style.display='none'" /><span class="photo-tag">07</span></div><figcaption>the outfit in question</figcaption></figure>
-        <figure class="shot reveal" data-tilt><div class="photo"><img src="photos/08.webp" alt="You walking towards me at the gathering" loading="lazy" decoding="async" onerror="this.style.display='none'" /><span class="photo-tag">08</span></div><figcaption>the day we all turned up</figcaption></figure>
-        <figure class="shot reveal" data-tilt><div class="photo"><img src="photos/09.webp" alt="You in blue light" loading="lazy" decoding="async" onerror="this.style.display='none'" /><span class="photo-tag">09</span></div><figcaption>the blue-hour version of you</figcaption></figure>
-        <figure class="shot reveal" data-tilt><div class="photo"><img src="photos/10.webp" alt="You being ridiculous" loading="lazy" decoding="async" onerror="this.style.display='none'" /><span class="photo-tag">10</span></div><figcaption>caught mid-joke</figcaption></figure>
+        <figure class="polaroid reveal" data-tilt><div class="photo"><img src="photos/06.webp" alt="You sitting on a bench in town" loading="lazy" decoding="async"><i class="tag">06</i></div><figcaption>five more minutes</figcaption></figure>
+        <figure class="polaroid reveal" data-tilt><div class="photo"><img src="photos/07.webp" alt="That top" loading="lazy" decoding="async"><i class="tag">07</i></div><figcaption>the outfit in question</figcaption></figure>
+        <figure class="polaroid reveal" data-tilt><div class="photo"><img src="photos/08.webp" alt="You walking towards me at the gathering" loading="lazy" decoding="async"><i class="tag">08</i></div><figcaption>the day we all turned up</figcaption></figure>
+        <figure class="polaroid reveal" data-tilt><div class="photo"><img src="photos/09.webp" alt="You in blue light" loading="lazy" decoding="async"><i class="tag">09</i></div><figcaption>the blue-hour version of you</figcaption></figure>
+        <figure class="polaroid reveal" data-tilt><div class="photo"><img src="photos/10.webp" alt="You being ridiculous" loading="lazy" decoding="async"><i class="tag">10</i></div><figcaption>caught mid-joke</figcaption></figure>
       </div>
-      <p class="note reveal">Ten of them. I could pick a different hundred and still not get it right.</p>
     </div>
   </section>
 
-  <!-- ═══════════════ VIDEO ═══════════════ -->
-  <section class="section section-video" id="video">
-    <div class="wrap wrap-narrow">
+  <!-- ═══════ 10 · VIDEO ═══════ -->
+  <section class="run" id="video">
+    <div class="stage stage-narrow">
       <p class="kicker reveal">drive with me</p>
       <h2 class="reveal">Press play. I'll stay right here.</h2>
       <p class="body reveal">Eight of us, one long evening. Pick a seat.</p>
-
       <figure class="reel reveal">
         <div class="reel-stage" id="reelStage">
           <video id="reel" controls playsinline preload="metadata" poster="photos/hero.webp"></video>
         </div>
-        <figcaption id="reelCap">Clip 01 &mdash; the one that started it</figcaption>
+        <figcaption id="reelCap">Clip 01</figcaption>
       </figure>
-
       <div class="playlist" id="playlist" role="tablist" aria-label="Choose a clip"></div>
-
-      <p class="note reveal" id="videoNote" hidden>Clips go in <code>videos/clip-01.mp4</code>&hellip;<code>clip-08.mp4</code>.</p>
+      <p class="note reveal" id="videoNote" hidden>Clips live in <code>videos/clip-01.mp4</code> … <code>clip-08.mp4</code>.</p>
     </div>
   </section>
 
-  <!-- ═══════════════ LETTER ═══════════════ -->
-  <section class="section section-letter" id="letter">
-    <div class="wrap wrap-narrow">
+  <!-- ═══════ 11 · THE LETTER ═══════ -->
+  <section class="run" id="letter">
+    <div class="stage stage-narrow">
       <p class="kicker reveal">the letter</p>
-
-      <!-- a sealed envelope she opens herself -->
       <div class="envelope reveal" id="envelope">
         <button class="envelope-btn" id="envelopeBtn" type="button" aria-expanded="false" aria-controls="letterBody">
-          <span class="envelope-flap" aria-hidden="true"></span>
-          <span class="envelope-front" aria-hidden="true"></span>
-          <span class="envelope-seal" aria-hidden="true">♥</span>
-          <span class="envelope-cta">tap to open</span>
+          <span class="env-front" aria-hidden="true"></span>
+          <span class="env-flap" aria-hidden="true"></span>
+          <span class="env-seal" aria-hidden="true">♥</span>
+          <span class="env-cta">tap to open</span>
         </button>
       </div>
-
-      <div id="letterBody" class="letter-body" hidden>
-        <h2 class="reveal">A few things I should probably say out loud more often:</h2>
+      <div class="letter-body" id="letterBody" hidden>
+        <h2 class="reveal">A few things I should say out loud more often:</h2>
         <ul class="hand">
           <li class="reveal">You make ordinary Tuesdays feel like something worth remembering.</li>
           <li class="reveal">You are kind to people who have never once been kind to them. I've watched you do it.</li>
@@ -267,14 +239,14 @@
           <li class="reveal">I would choose you on a Tuesday, on a crisis, on a planet with no roads at all.</li>
           <li class="reveal">Whatever kilometre we're at — I am not looking for the exit.</li>
         </ul>
-        <p class="sign reveal">yours, always&nbsp;—&nbsp;♥</p>
+        <p class="sign reveal">yours, always — ♥</p>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════ TICKET ═══════════════ -->
-  <section class="section section-ticket" id="ticket">
-    <div class="wrap wrap-narrow">
+  <!-- ═══════ 12 · ARRIVAL ═══════ -->
+  <section class="run" id="arrival">
+    <div class="stage stage-narrow">
       <p class="kicker reveal">final stop</p>
       <div class="ticket reveal">
         <div class="ticket-main">
@@ -283,25 +255,25 @@
           <div class="ticket-row"><span>destination</span><b>Everywhere with me</b></div>
           <div class="ticket-row"><span>gate</span><b>My arms</b></div>
           <div class="ticket-row"><span>seat</span><b>Next to me, always</b></div>
-          <div class="ticket-row"><span>departures</span><b>When you're ready</b></div>
+          <div class="ticket-row"><span>departs</span><b>When you're ready</b></div>
         </div>
         <div class="ticket-stub">
-          <p class="ticket-class">first class<br /><span>♥</span></p>
+          <p class="ticket-class">first class<br><span>♥</span></p>
           <div class="barcode" aria-hidden="true"></div>
           <p class="ticket-seats">SEAT 01A</p>
         </div>
       </div>
-      <p class="body body-big reveal">Boarding is permanent. There is no return ticket.</p>
-      <a class="btn btn-ghost reveal" href="#home">Drive it again&nbsp;↺</a>
+      <p class="sign-off reveal">Boarding is permanent. There is no return ticket.</p>
+      <a class="btn ghost reveal" href="#home">Drive it again ↺</a>
     </div>
   </section>
 
-  <footer class="foot">
-    <p>Built by hand. Meant entirely for you.</p>
-    <p class="foot-small">Gloria&nbsp;Colete &nbsp;·&nbsp; km ∞</p>
-  </footer>
-
 </main>
+
+<footer class="foot">
+  <p>Built by hand. Meant entirely for you.</p>
+  <p class="foot-small">Gloria&nbsp;Colete · km ∞</p>
+</footer>
 
 <script src="script.js"></script>
 </body>

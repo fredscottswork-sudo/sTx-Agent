@@ -84,8 +84,8 @@ const CLIPS = [
 Everything personal lives in `index.html` as plain text:
 
 - Her name — in `<title>`, the `<h1>`, and the boarding-pass `passenger` row.
-- The five stories — inside `<article class="stop">`.
-- The gallery captions — the `<figcaption>` under each `.shot`.
+- The five stories — inside `<section class="stage">`, each with `id="stop-1"` … `id="stop-5"`.
+- The gallery captions — the `<figcaption>` under each `.polaroid`.
 - The letter — the `<ul class="hand">` list.
 - The closing — the `#ticket` section.
 
@@ -93,7 +93,7 @@ Everything personal lives in `index.html` as plain text:
 
 - Keep her name as `Gloria&nbsp;Colete` in the headline so it never wraps mid-name.
 - The hero uses `<em>` for the second line — that's what gets the peach→lilac gradient.
-- If you add a stop, duplicate a whole `<article class="stop">` block, give the copy
+- If you add a stop, duplicate a whole `<section class="stage">` block, give the copy
   an `id="stop-6"`, then add it to the `STOPS` array in `script.js`.
 
 ---

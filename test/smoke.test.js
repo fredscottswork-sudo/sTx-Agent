@@ -174,7 +174,7 @@ setTimeout(async () => {
   results.push(['loader dismisses', loaderGone]);
 
   // ── the runway: chapters fly at the camera instead of scrolling ──
-  const stages = [...d.querySelectorAll('.hero-inner, .section > .wrap, .stop > .wrap')];
+  const stages = [...d.querySelectorAll('.stage')];
   results.push(['runway chapters built (' + stages.length + ')', stages.length === 12]);
 
   // jsdom has no layout: give each chapter a believable runway
@@ -257,11 +257,11 @@ setTimeout(async () => {
   results.push(['reveals activated (' + revealed + '/' + d.querySelectorAll('.reveal').length + ')', revealed > 0]);
 
   // 3. map pins generated
-  const pins = d.querySelectorAll('.map-pin').length;
+  const pins = d.querySelectorAll('.pin').length;
   results.push(['map pins built (' + pins + ')', pins === 5]);
 
   // 4. route path gets its ink length and inks in as you scroll
-  const mp = d.getElementById('mapPath');
+  const mp = d.getElementById('mapInk');
   const route = d.getElementById('route');
   // jsdom has no layout: give the section believable dimensions
   Object.defineProperty(route, 'offsetHeight', { value: 800, configurable: true });
@@ -289,7 +289,7 @@ setTimeout(async () => {
   results.push(['counters ran (' + tally.join(',') + ')', tally.every(t => +t > 0)]);
 
   // 6. hearts spawned
-  results.push(['hearts spawned (' + d.querySelectorAll('.hearts i').length + ')', d.querySelectorAll('.hearts i').length > 0]);
+  results.push(['hearts spawned (' + d.querySelectorAll('#motes i').length + ')', d.querySelectorAll('#motes i').length > 0]);
 
   // 7. audio wiring
   try {
