@@ -20,22 +20,42 @@ function safe(name, fn) {
 }
 
 /* ───────────────────────────────────────────────────────────────
-   1.  THE SCENE — a road that carries you from dawn to midnight
+   1.  THE SCENE — a real 3D road, from dawn to midnight
    ─────────────────────────────────────────────────────────────── */
 
 const cv  = document.getElementById('scene');
 const ctx = cv.getContext('2d', { alpha: false });
 
-let W = 0, H = 0, DPR = 1, horizonY = 0, focal = 1;
-const camH = 1.55;          // camera height, metres
-const RW   = 3.9;           // road half-width, metres
-const NEAR = 1.4;           // nearest drawable distance, metres
-const FAR  = 460;           // fog distance, metres
-const SPAN = 7.5;           // metres per road segment
+let W = 0, H = 0, DPR = 1, horizonY = 0, focal = 1, cx = 0;
 
-let drive = 0;              // metres travelled (the thing that makes the world move)
-let journey = 0;            // 0 → 1 across the whole page
-let boost  = 0;             // scroll-velocity kick
+const CAM_H     = 1.62;   // eye height, metres
+const ROAD_HALF = 4.5;    // half carriageway width, metres
+const Z_NEAR    = 2.2;    // nearest drawn sample, metres
+const Z_FAR     = 540;    // fog distance, metres
+const SEG_MAX   = 116;    // cross-section samples (fewer on phones)
+let   SEG       = SEG_MAX;
+
+/* The road is a genuine world-space curve: it bends and it rolls over
+   hills. Everything else is projected from it, so the whole scene stays
+   consistent as you drive. */
+function roadX(z) {
+  return 8.2 * Math.sin(z * 0.00500)
+       + 4.3 * Math.sin(z * 0.01280 + 1.7)
+       + 2.0 * Math.sin(z * 0.02710 + 0.4);
+}
+function roadY(z) {
+  return 2.9 * Math.sin(z * 0.00360 + 0.6)
+       + 1.4 * Math.sin(z * 0.00940 + 2.4)
+       + 0.5 * Math.sin(z * 0.02100 + 1.1);
+}
+
+let drive = 0;        // how far along the road we are, in metres
+let camX = 0;         // camera lags the centreline — that's the steering
+let camY = CAM_H;
+let roll = 0;         // bank into the corners
+let journey = 0;      // 0 → 1 across the page
+let boost = 0;        // scroll-velocity kick
+let mx = 0, my = 0;   // pointer parallax, −1 → 1
 
 /* colour helpers ------------------------------------------------ */
 const hex2rgb = h => {
@@ -70,73 +90,42 @@ function sky(p) {
     low: mixc(a.low, b.low, e),
     sun: mixc(a.sun, b.sun, e),
     gnd: mixc(a.gnd, b.gnd, e),
-    t: e,
   };
 }
 const nightness = p => clamp((p - 0.70) / 0.24, 0, 1);
 const duskness  = p => clamp((p - 0.52) / 0.24, 0, 1);
 
-/* ── deterministic scenery ───────────────────────────────────── */
-function rng(seed) {
-  let s = seed >>> 0;
-  return () => {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    return s / 4294967296;
-  };
-}
+/* deterministic scenery ----------------------------------------- */
+const hash = n => { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); };
 
-let STARS = [], CLOUDS = [], RIDGES = [], PROPS = [];
-
-function buildScenery() {
-  const r = rng(20241013);
-
-  // stars
-  STARS = Array.from({ length: 170 }, () => ({
-    x: r(), y: r() * 0.72, m: r() * 1.5 + 0.3, p: r() * Math.PI * 2,
-  }));
-
-  // clouds — three parallax layers
-  CLOUDS = Array.from({ length: 11 }, () => {
-    const layer = Math.floor(r() * 3);
-    return {
-      x: r(), layer,
-      y: 0.08 + layer * 0.11 + r() * 0.05,
-      s: (0.5 + r() * 0.9) * (1 + layer * 0.42),
-      a: 0.10 + r() * 0.16,
-      v: 0.0016 + r() * 0.004,
-    };
-  });
-
-  // mountain ridges
-  RIDGES = [0, 1, 2].map(layer => {
-    const rr = rng(77 + layer * 31);
+let STARS = [], CLOUDS = [], RIDGES = [];
+(function buildScenery() {
+  for (let i = 0; i < 190; i++) {
+    STARS.push({ x: hash(i + 1), y: hash(i + 99) * 0.74, m: hash(i + 7) * 1.5 + 0.3, p: hash(i + 31) * 6.283 });
+  }
+  for (let i = 0; i < 12; i++) {
+    const layer = i % 3;
+    CLOUDS.push({
+      x: hash(i + 200), layer,
+      y: 0.07 + layer * 0.10 + hash(i + 300) * 0.05,
+      s: (0.5 + hash(i + 400) * 0.9) * (1 + layer * 0.45),
+      a: 0.09 + hash(i + 500) * 0.15,
+      v: 0.0016 + hash(i + 600) * 0.004,
+    });
+  }
+  for (let layer = 0; layer < 3; layer++) {
     const pts = [];
-    const n = 26;
-    for (let i = 0; i <= n; i++) {
+    for (let i = 0; i <= 26; i++) {
       pts.push({
-        x: i / n,
-        y: 0.34 + rr() * 0.30 - Math.sin(i * 1.1 + layer) * 0.10 + layer * 0.055,
+        x: i / 26,
+        y: 0.34 + hash(i + layer * 41) * 0.30 - Math.sin(i * 1.1 + layer) * 0.10 + layer * 0.055,
       });
     }
-    return { pts, layer, par: 0.10 + layer * 0.17 };
-  });
+    RIDGES.push({ pts, layer, par: 0.10 + layer * 0.17 });
+  }
+})();
 
-  // roadside props
-  PROPS = Array.from({ length: 90 }, (_, i) => {
-    const rr = rng(1000 + i * 13);
-    return {
-      d: i * 26 + rr() * 10,
-      side: i % 2 === 0 ? -1 : 1,
-      off: 5.2 + rr() * 9,
-      kind: rr() < 0.62 ? 'tree' : (rr() < 0.5 ? 'pole' : 'bush'),
-      h: rr() * 1.9 + 1,
-      s: rr(),
-    };
-  });
-}
-buildScenery();
-
-/* ── sizing ──────────────────────────────────────────────────── */
+/* sizing --------------------------------------------------------- */
 function resize() {
   DPR = Math.min(devicePixelRatio || 1, 2);
   W = innerWidth; H = innerHeight;
@@ -148,51 +137,79 @@ function resize() {
 
   horizonY = Math.round(H * 0.665);
   focal = Math.max(W * 1.02, H * 0.95);
+  cx = W / 2;
+  SEG = W < 760 ? 80 : SEG_MAX;
 }
 resize();
 addEventListener('resize', resize, { passive: true });
 
-/* ── projection ──────────────────────────────────────────────── */
-const px = (x, d) => W / 2 + (x * focal) / d;
-const py = (d)     => horizonY + (camH * focal) / d;
-const pyH = (d, h) => horizonY + ((camH - h) * focal) / d;
+/* projection ------------------------------------------------------ */
+/* World point (X across, Z along, h above the road surface) → screen */
+function proj(X, Z, h) {
+  const dz = Z - drive;
+  if (dz < 0.5) return null;
+  const inv = focal / dz;
+  return {
+    x: cx + (X - camX) * inv + mx * 26,
+    y: horizonY - (camY - roadY(Z) - h) * inv + my * 14,
+    s: inv,
+  };
+}
 
-/* ── drawing pieces ──────────────────────────────────────────── */
+/* ── the cross-section of road we are about to draw ─────────────── */
+/* xs[] holds DISTANCE AHEAD of the camera, never an absolute position:
+   `drive` grows forever, so an absolute frame would slide off the end
+   of the world after half a minute and the road would vanish. */
+let xs = new Float64Array(SEG + 1);
+let pl = new Array(SEG + 1);
+let pr = new Array(SEG + 1);
+const absZ = i => drive + xs[i];
+
+function buildSection() {
+  for (let i = 0; i <= SEG; i++) {
+    const t = i / SEG;
+    xs[i] = Z_NEAR + (Z_FAR - Z_NEAR) * Math.pow(t, 2.05);
+    const Z = drive + xs[i];
+    const centre = roadX(Z);
+    pl[i] = proj(centre - ROAD_HALF, Z, 0.02);
+    pr[i] = proj(centre + ROAD_HALF, Z, 0.02);
+  }
+}
+
+/* ── sky, sun, stars, clouds ─────────────────────────────────── */
 
 function drawSky(S, p) {
   const g = ctx.createLinearGradient(0, 0, 0, horizonY);
-  g.addColorStop(0,    S.top);
+  g.addColorStop(0, S.top);
   g.addColorStop(0.55, S.mid);
-  g.addColorStop(1,    S.low);
+  g.addColorStop(1, S.low);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, horizonY + 1);
 
-  // stars
   const nk = nightness(p);
   if (nk > 0.001) {
     for (const st of STARS) {
-      const tw = REDUCED ? 0.75 : 0.55 + 0.45 * Math.sin(Date.now() / 900 + st.p);
+      const tw = REDUCED ? 0.8 : 0.55 + 0.45 * Math.sin(Date.now() / 900 + st.p);
       ctx.globalAlpha = nk * tw;
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(st.x * W, st.y * horizonY, st.m, 0, 7);
+      ctx.arc(st.x * W + mx * 10, st.y * horizonY, st.m, 0, 7);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
   }
 
-  // sun / moon
-  const travel = p / 0.92;                    // 0 → 1 across the day
-  const bx = lerp(0.10, 0.92, travel) * W;
+  const travel = p / 0.92;
+  const bx = lerp(0.10, 0.92, travel) * W + mx * 34;
   const arc = Math.sin(clamp(travel, 0, 1) * Math.PI);
   const by = horizonY - arc * H * 0.46;
-  const R = lerp(46, 26, nightness(p)) * clamp(W / 1280, 0.62, 1.15);
+  const R = lerp(46, 26, nk) * clamp(W / 1280, 0.62, 1.15);
 
   if (travel <= 1) {
     const glow = ctx.createRadialGradient(bx, by, 0, bx, by, R * 9);
-    glow.addColorStop(0,   rgba(S.sun, 0.55));
+    glow.addColorStop(0, rgba(S.sun, 0.55));
     glow.addColorStop(0.22, rgba(S.sun, 0.18));
-    glow.addColorStop(1,   rgba(S.sun, 0));
+    glow.addColorStop(1, rgba(S.sun, 0));
     ctx.fillStyle = glow;
     ctx.fillRect(bx - R * 9, by - R * 9, R * 18, R * 18);
 
@@ -221,29 +238,29 @@ function drawClouds(p) {
 
   for (const c of CLOUDS) {
     const drift = (c.x + t * c.v * (1 + journey * 2.4) + journey * c.layer * 0.18) % 1.35 - 0.18;
-    const cx = drift * W;
+    const cx2 = drift * W;
     const cy = c.y * horizonY;
     const w = 150 * c.s;
     const h = w * 0.30;
-    const a = c.a * (1 - nightness(p) * 0.62) * (0.6 + c.layer * 0.25);
-
-    ctx.globalAlpha = a;
+    ctx.globalAlpha = c.a * (1 - nightness(p) * 0.62) * (0.6 + c.layer * 0.25);
     ctx.fillStyle = col;
     ctx.beginPath();
-    ctx.ellipse(cx, cy, w, h, 0, 0, 7);
-    ctx.ellipse(cx - w * 0.42, cy + h * 0.35, w * 0.58, h * 0.66, 0, 0, 7);
-    ctx.ellipse(cx + w * 0.44, cy + h * 0.30, w * 0.62, h * 0.72, 0, 0, 7);
+    ctx.ellipse(cx2, cy, w, h, 0, 0, 7);
+    ctx.ellipse(cx2 - w * 0.42, cy + h * 0.35, w * 0.58, h * 0.66, 0, 0, 7);
+    ctx.ellipse(cx2 + w * 0.44, cy + h * 0.30, w * 0.62, h * 0.72, 0, 0, 7);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 }
+
+/* ── distant hills, fixed on the horizon ───────────────────────── */
 
 function drawRidges(S, p) {
   const nk = nightness(p), dk = duskness(p);
   const col = mixc(S.gnd, S.low, 0.22);
 
   for (const rg of RIDGES) {
-    const off = (-journey * rg.par * 2.4) % 1;
+    const off = (-journey * rg.par * 2.4 - mx * 0.02) % 1;
     ctx.fillStyle = mixc(col, [8, 5, 18], nk * 0.45 + rg.layer * 0.10);
     ctx.beginPath();
     ctx.moveTo(-W * 0.3, horizonY + 2);
@@ -251,14 +268,12 @@ function drawRidges(S, p) {
       const pt = rg.pts[i % rg.pts.length];
       let x = pt.x + off;
       x = ((x % 1) + 1) % 1;
-      const sx = -W * 0.3 + x * W * 1.6;
-      ctx.lineTo(sx, horizonY - pt.y * H * 0.20 - rg.layer * 3);
+      ctx.lineTo(-W * 0.3 + x * W * 1.6, horizonY - pt.y * H * 0.20 - rg.layer * 3);
     }
     ctx.lineTo(W * 1.3, horizonY + 2);
     ctx.closePath();
     ctx.fill();
   }
-  // warm haze hugging the horizon at golden hour
   if (dk > 0.01) {
     const hz = ctx.createLinearGradient(0, horizonY - H * 0.14, 0, horizonY + 4);
     hz.addColorStop(0, rgba(S.low, 0));
@@ -268,210 +283,271 @@ function drawRidges(S, p) {
   }
 }
 
-function drawGround(S, p) {
-  const g = ctx.createLinearGradient(0, horizonY, 0, H);
-  g.addColorStop(0, mixc(S.gnd, S.low, 0.30));
-  g.addColorStop(0.4, S.gnd);
-  g.addColorStop(1, mixc(S.gnd, [0, 0, 0], 0.55));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, horizonY, W, H - horizonY);
+/* ── terrain: follows the hills, so crests actually hide things ── */
 
-  // scrolling grass streaks for speed
-  const nk = nightness(p);
-  ctx.globalAlpha = 0.09;
-  ctx.fillStyle = mixc(S.gnd, [255, 255, 255], 0.35);
-  for (let i = 0; i < 34; i++) {
-    const d = NEAR + ((i * SPAN * 1.7) - (drive % (SPAN * 1.7)) + SPAN * 1.7 * 34) % (SPAN * 1.7 * 34);
-    const y = py(d);
-    if (y > H + 40) continue;
-    const w = (RW * focal) / d * 5.2;
-    ctx.fillRect(W / 2 - w / 2 + Math.sin(i * 2.4) * w * 0.22, y, w, Math.max(1, 3 * (60 / d)));
+function drawTerrain(S) {
+  const g = ctx.createLinearGradient(0, horizonY - H * 0.1, 0, H);
+  g.addColorStop(0, mixc(S.gnd, S.low, 0.34));
+  g.addColorStop(0.35, S.gnd);
+  g.addColorStop(1, mixc(S.gnd, [0, 0, 0], 0.62));
+  ctx.fillStyle = g;
+
+  ctx.beginPath();
+  let started = false;
+  for (let i = SEG; i >= 0; i--) {                     // far → near, left
+    const Z = absZ(i);
+    const q = proj(roadX(Z) - 520, Z, 0);
+    if (!q) continue;
+    if (!started) { ctx.moveTo(q.x, q.y); started = true; } else ctx.lineTo(q.x, q.y);
   }
-  ctx.globalAlpha = 1;
+  for (let i = 0; i <= SEG; i++) {                      // near → far, right
+    const Z = absZ(i);
+    const q = proj(roadX(Z) + 520, Z, 0);
+    if (!q) continue;
+    ctx.lineTo(q.x, q.y);
+  }
+  ctx.closePath();
+  ctx.fill();
 }
 
-function quad(x1, y1, x2, y2, x3, y3, x4, y4, fill) {
+/* ── the road surface ─────────────────────────────────────────── */
+
+function poly(a, b, fill) {
   ctx.beginPath();
-  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.lineTo(x4, y4);
+  ctx.moveTo(a[0], a[1]);
+  for (let i = 1; i < a.length; i++) ctx.lineTo(a[i][0], a[i][1]);
+  for (let i = b.length - 1; i >= 0; i--) ctx.lineTo(b[i][0], b[i][1]);
   ctx.closePath();
   ctx.fillStyle = fill;
   ctx.fill();
 }
 
-function drawProps(S, p) {
-  const nk = nightness(p);
-  const trunk = mixc(S.gnd, [0, 0, 0], 0.62);
-  const leaf  = mixc(S.gnd, [0, 0, 0], 0.44);
-  const lampGlow = p > 0.72 ? 0.85 : 0.22;
-
-  for (const pr of PROPS) {
-    const d = ((pr.d - drive) % 2340 + 2340) % 2340 + NEAR;
-    if (d > 330) continue;
-    const fog = clamp(1 - d / 330, 0, 1) ** 1.5;
-    const x = pr.side * pr.off;
-    const bx = px(x, d), by = py(d);
-    if (by < horizonY || by > H + 60) continue;
-
-    const alpha = 0.25 + fog * 0.75;
-    ctx.globalAlpha = alpha;
-
-    if (pr.kind === 'tree') {
-      const h = 4.2 + pr.h * 3.4;
-      const top = pyH(d, h);
-      const halfW = ((1.0 + pr.s * 0.7) * focal) / d;
-      ctx.fillStyle = leaf;
-      ctx.beginPath();
-      ctx.moveTo(bx - halfW, by);
-      ctx.lineTo(bx, top);
-      ctx.lineTo(bx + halfW, by);
-      ctx.closePath();
-      ctx.fill();
-      // trunk: a real slice of ground plane, so it scales correctly at any depth
-      const trunkH = (1.1 * focal) / d;
-      ctx.fillStyle = trunk;
-      ctx.fillRect(bx - halfW * 0.10, by - trunkH, Math.max(0.6, halfW * 0.20), trunkH);
-    } else if (pr.kind === 'pole') {
-      const h = 5.6;
-      const top = pyH(d, h);
-      ctx.strokeStyle = trunk;
-      ctx.lineWidth = Math.max(1, (0.16 * focal) / d);
-      ctx.beginPath();
-      ctx.moveTo(bx, by); ctx.lineTo(bx, top);
-      ctx.stroke();
-      const armY = top + ((0.6 * focal) / d) * 5;
-      const armW = (0.7 * focal) / d;
-      ctx.beginPath();
-      ctx.moveTo(bx - armW, armY); ctx.lineTo(bx + armW, armY);
-      ctx.stroke();
-      if (lampGlow > 0.3) {
-        const gl = ctx.createRadialGradient(bx, armY, 0, bx, armY, armW * 3.4);
-        gl.addColorStop(0, rgba([255, 214, 150], 0.75 * fog));
-        gl.addColorStop(1, rgba([255, 214, 150], 0));
-        ctx.fillStyle = gl;
-        ctx.fillRect(bx - armW * 3.4, armY - armW * 3.4, armW * 6.8, armW * 6.8);
-      }
-    } else {
-      const r = (1.1 + pr.s * 0.8) * focal / d;
-      ctx.fillStyle = leaf;
-      ctx.beginPath();
-      ctx.ellipse(bx, by - r * 0.35, r, r * 0.66, 0, 0, 7);
-      ctx.fill();
-    }
-  }
-  ctx.globalAlpha = 1;
-  void nk;
+function band(i, off0, off1, h, fill) {
+  const za = absZ(i), zb = absZ(i + 1);
+  const ca = roadX(za), cb = roadX(zb);
+  const A = proj(ca + off0, za, h), B = proj(ca + off1, za, h);
+  const C = proj(cb + off1, zb, h), D = proj(cb + off0, zb, h);
+  if (!A || !B || !C || !D) return false;
+  ctx.beginPath();
+  ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y); ctx.lineTo(D.x, D.y);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  return true;
 }
 
 function drawRoad(S, p) {
   const nk = nightness(p);
-  const asphaltFar  = mixc(mixc(S.gnd, [0, 0, 0], 0.55), S.low, 0.22);
-  const asphaltNear = mixc([26, 22, 34], [46, 38, 54], 0.4 + nk * 0.1);
+  const far  = mixc(mixc(S.gnd, [0, 0, 0], 0.55), S.low, 0.26);
+  const near = mixc([24, 20, 32], [44, 36, 52], 0.45);
 
-  const phase = drive % (SPAN * 2);
-  const segs = Math.ceil((FAR - NEAR) / SPAN);
+  // tarmac
+  const L = [], R = [];
+  for (let i = 0; i <= SEG; i++) {
+    const qa = pl[i], qb = pr[i];
+    if (!qa || !qb) continue;
+    L.push([qa.x, qa.y]);
+    R.push([qb.x, qb.y]);
+  }
+  if (L.length > 2) poly(L, R, far);
+  if (L.length > 2) {
+    const nearFog = clamp(xs[6] / 90, 0, 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(L[0][0], L[0][1]);
+    for (let i = 1; i < L.length; i++) ctx.lineTo(L[i][0], L[i][1]);
+    for (let i = R.length - 1; i >= 0; i--) ctx.lineTo(R[i][0], R[i][1]);
+    ctx.closePath();
+    ctx.clip();
+    const nearG = ctx.createLinearGradient(0, H, 0, horizonY);
+    nearG.addColorStop(0, rgba(near, 0.95 * nearFog));
+    nearG.addColorStop(1, rgba(near, 0));
+    ctx.fillStyle = nearG;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
 
-  // far → near so nearer segments overlap correctly
-  for (let i = segs; i >= 0; i--) {
-    const d0 = NEAR + i * SPAN + phase;
-    const d1 = d0 + SPAN;
-    if (d1 > FAR) continue;
+  // markings, far → near so nearer ones overlap
+  for (let i = SEG - 1; i >= 0; i--) {
+    const dz = xs[i];
+    if (dz > 230) continue;
+    // a segment thinner than a pixel adds cost, not detail
+    const a = pl[i], b = pl[i + 1];
+    if (a && b && Math.abs(a.y - b.y) < 0.45) continue;
+    const fog = clamp(dz / 230, 0, 1);
+    const alpha = clamp(1 - dz / 230, 0.12, 1);
+    void fog;
 
-    const y0 = py(d0), y1 = py(d1);
-    if (y0 > H + 60) continue;
-    if (y1 < horizonY - 2) continue;
+    // rumble strips — alternating, and they give the road its speed
+    const rum = (i & 1) ? '#e8695f' : '#f4ece0';
+    band(i, -ROAD_HALF - 0.55, -ROAD_HALF + 0.18, 0.035, mixc(hex2rgb(rum), S.low, (1 - alpha) * 0.8));
+    band(i,  ROAD_HALF - 0.18,  ROAD_HALF + 0.55, 0.035, mixc(hex2rgb(rum), S.low, (1 - alpha) * 0.8));
 
-    const fog = clamp(1 - d0 / FAR, 0, 1);
-    const xa0 = px(-RW, d0), xb0 = px(RW, d0);
-    const xa1 = px(-RW, d1), xb1 = px(RW, d1);
+    // continuous edge lines
+    const edge = mixc(mixc(S.low, [255, 246, 226], 0.5), S.low, (1 - alpha) * 0.85);
+    band(i, -ROAD_HALF + 0.20, -ROAD_HALF + 0.42, 0.04, edge);
+    band(i,  ROAD_HALF - 0.42,  ROAD_HALF - 0.20, 0.04, edge);
 
-    // asphalt
-    quad(
-      xa0, y0, xb0, y0, xb1, y1, xa1, y1,
-      mixc(asphaltFar, asphaltNear, fog)
-    );
-
-    // rumble strip on the shoulder, alternating — gives the road its speed
-    const rumble = i % 2 === 0 ? '#e8695f' : '#f4ece0';
-    for (const s of [-1, 1]) {
-      quad(
-        px(s * (RW - 0.62), d0), y0, px(s * (RW + 0.30), d0), y0,
-        px(s * (RW + 0.30), d1), y1, px(s * (RW - 0.62), d1), y1,
-        mixc(hex2rgb(rumble), S.low, clamp(d0 / FAR, 0, 1) * 0.72)
-      );
-    }
-
-    // continuous edge line
-    for (const s of [-1, 1]) {
-      quad(
-        px(s * (RW - 0.30), d0), y0, px(s * (RW - 0.08), d0), y0,
-        px(s * (RW - 0.08), d1), y1, px(s * (RW - 0.30), d1), y1,
-        mixc(S.low, '#fff6e2', 0.5)
-      );
-    }
-
-    // centre dashes — on every other segment
-    if (i % 2 === 0) {
-      quad(
-        px(-0.18, d0), y0, px(0.18, d0), y0,
-        px(0.18, d1), y1, px(-0.18, d1), y1,
-        mixc(S.low, '#fffaf0', 0.45)
-      );
+    // centre dashes
+    if ((i & 1) === 0) {
+      const dash = mixc(mixc(S.low, [255, 250, 240], 0.45), S.low, (1 - alpha) * 0.85);
+      band(i, -0.17, 0.17, 0.045, dash);
     }
   }
+
+  // wet tarmac catching the tail lights after dark
+  if (nk > 0.05) {
+    const refl = ctx.createLinearGradient(0, H, 0, H * 0.72);
+    refl.addColorStop(0, `rgba(255,110,130,${0.16 * nk})`);
+    refl.addColorStop(1, 'rgba(255,110,130,0)');
+    ctx.fillStyle = refl;
+    ctx.fillRect(cx - W * 0.34, H * 0.72, W * 0.68, H * 0.28);
+  }
 }
+
+/* ── roadside: trees, poles, bushes — fixed in world space ─────── */
+
+const PROP_SP = 21;
+
+function drawProps(S, p) {
+  const trunk = mixc(S.gnd, [0, 0, 0], 0.62);
+  const leaf  = mixc(S.gnd, [0, 0, 0], 0.44);
+  const lamps = p > 0.72 ? 0.9 : 0.25;
+
+  const i0 = Math.floor((drive + Z_NEAR) / PROP_SP);
+  const i1 = Math.ceil((drive + 360) / PROP_SP);
+
+  for (let i = i0; i <= i1; i++) {
+    for (let s = -1; s <= 1; s += 2) {
+      const Z = i * PROP_SP + hash(i * 7 + (s > 0 ? 3 : 9)) * PROP_SP;
+      const dz = Z - drive;
+      if (dz < Z_NEAR || dz > 340) continue;
+
+      const rnd = hash(i * 13 + s * 29);
+      const kind = rnd < 0.55 ? 'tree' : (rnd < 0.85 ? 'bush' : 'pole');
+      const X = roadX(Z) + s * (ROAD_HALF + 2.6 + hash(i + s * 17) * 11);
+      const g0 = proj(X, Z, 0);
+      if (!g0 || g0.y < horizonY - 2 || g0.y > H + 60) continue;
+
+      const fog = clamp(1 - dz / 340, 0, 1) ** 1.5;
+      ctx.globalAlpha = 0.3 + fog * 0.7;
+
+      if (kind === 'tree') {
+        const h = 4.4 + hash(i * 3 + s) * 3.6;
+        const top = proj(X, Z, h);
+        if (!top) { ctx.globalAlpha = 1; continue; }
+        const halfW = (1.05 + hash(i * 5) * 0.75) * g0.s;
+        ctx.fillStyle = leaf;
+        ctx.beginPath();
+        ctx.moveTo(g0.x - halfW, g0.y);
+        ctx.lineTo(top.x, top.y);
+        ctx.lineTo(g0.x + halfW, g0.y);
+        ctx.closePath();
+        ctx.fill();
+        const trunkTop = proj(X, Z, 1.2);
+        if (trunkTop) {
+          ctx.fillStyle = trunk;
+          ctx.fillRect(g0.x - halfW * 0.10, trunkTop.y, Math.max(0.7, halfW * 0.20), g0.y - trunkTop.y);
+        }
+      } else if (kind === 'bush') {
+        const r = (1.1 + hash(i * 11) * 0.9) * g0.s;
+        ctx.fillStyle = leaf;
+        ctx.beginPath();
+        ctx.ellipse(g0.x, g0.y - r * 0.35, r, r * 0.68, 0, 0, 7);
+        ctx.fill();
+      } else {
+        const h = 5.8;
+        const top = proj(X, Z, h);
+        if (!top) { ctx.globalAlpha = 1; continue; }
+        ctx.strokeStyle = trunk;
+        ctx.lineWidth = Math.max(0.8, 0.16 * g0.s);
+        ctx.beginPath();
+        ctx.moveTo(g0.x, g0.y);
+        ctx.lineTo(top.x, top.y);
+        const armY = top.y + 0.6 * g0.s * 5;
+        const armW = 0.75 * g0.s;
+        ctx.lineTo(top.x + armW, armY);
+        ctx.moveTo(top.x - armW, armY);
+        ctx.stroke();
+        if (lamps > 0.35) {
+          const gl = ctx.createRadialGradient(top.x, armY, 0, top.x, armY, Math.max(2, armW * 3.4));
+          gl.addColorStop(0, rgba([255, 214, 150], 0.8 * fog));
+          gl.addColorStop(1, rgba([255, 214, 150], 0));
+          ctx.fillStyle = gl;
+          ctx.fillRect(top.x - armW * 3.4, armY - armW * 3.4, armW * 6.8, armW * 6.8);
+        }
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ── the car, banking into the corners ────────────────────────── */
 
 function drawCar(S, p) {
   const w = clamp(W * 0.26, 130, 250);
   const bob = REDUCED ? 0 : Math.sin(Date.now() / 90) * (1.1 + boost * 5);
-  const cx = W / 2;
+  const bank = roll * 0.55;
+  const bx = cx + mx * 8;
   const baseY = H + w * 0.10 + bob;
+
+  ctx.save();
+  ctx.translate(bx, baseY);
+  ctx.rotate(bank);
+  ctx.translate(-bx, -baseY);
 
   const bodyTop = baseY - w * 0.46;
   const cabinTop = bodyTop - w * 0.42;
 
-  ctx.save();
-
-  // headlight wash on the road ahead
-  const wash = ctx.createRadialGradient(cx, bodyTop, 0, cx, bodyTop, w * 1.5);
-  wash.addColorStop(0, `rgba(255,225,190,${0.10 + nightness(p) * 0.14})`);
-  wash.addColorStop(1, 'rgba(255,225,190,0)');
+  // headlight wash down the road ahead
+  const wash = ctx.createRadialGradient(bx, bodyTop, 0, bx, bodyTop, w * 1.8);
+  wash.addColorStop(0, `rgba(255,228,196,${0.09 + nightness(p) * 0.16})`);
+  wash.addColorStop(1, 'rgba(255,228,196,0)');
   ctx.fillStyle = wash;
-  ctx.fillRect(cx - w * 1.5, bodyTop - w * 1.5, w * 3, w * 3);
+  ctx.fillRect(bx - w * 1.8, bodyTop - w * 1.8, w * 3.6, w * 3.6);
+
+  // volumetric beams
+  const beam = ctx.createLinearGradient(0, bodyTop, 0, horizonY);
+  beam.addColorStop(0, `rgba(255,232,200,${0.10 + nightness(p) * 0.16})`);
+  beam.addColorStop(1, 'rgba(255,232,200,0)');
+  ctx.fillStyle = beam;
+  ctx.beginPath();
+  ctx.moveTo(bx - w * 0.30, bodyTop);
+  ctx.lineTo(bx + w * 0.30, bodyTop);
+  ctx.lineTo(bx + w * 1.25, horizonY + 6);
+  ctx.lineTo(bx - w * 1.25, horizonY + 6);
+  ctx.closePath();
+  ctx.fill();
 
   const body = mixc([44, 34, 58], S.low, 0.10);
   const r = w * 0.09;
 
-  // cabin
   ctx.fillStyle = mixc(body, [0, 0, 0], 0.18);
   ctx.beginPath();
-  ctx.roundRect(cx - w * 0.345, cabinTop, w * 0.69, w * 0.50, [w * 0.16, w * 0.16, w * 0.05, w * 0.05]);
+  ctx.roundRect(bx - w * 0.345, cabinTop, w * 0.69, w * 0.50, [w * 0.16, w * 0.16, w * 0.05, w * 0.05]);
   ctx.fill();
 
-  // rear window
   const glass = ctx.createLinearGradient(0, cabinTop, 0, cabinTop + w * 0.34);
   glass.addColorStop(0, mixc(S.mid, [255, 255, 255], 0.22));
   glass.addColorStop(1, mixc([18, 12, 30], [60, 45, 80], 0.5));
   ctx.fillStyle = glass;
   ctx.beginPath();
-  ctx.roundRect(cx - w * 0.28, cabinTop + w * 0.055, w * 0.56, w * 0.335, w * 0.09);
+  ctx.roundRect(bx - w * 0.28, cabinTop + w * 0.055, w * 0.56, w * 0.335, w * 0.09);
   ctx.fill();
 
-  // body
   ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.roundRect(cx - w / 2, bodyTop, w, w * 0.52, [r, r, w * 0.05, w * 0.05]);
+  ctx.roundRect(bx - w / 2, bodyTop, w, w * 0.52, [r, r, w * 0.05, w * 0.05]);
   ctx.fill();
 
-  // shoulder highlight
   ctx.fillStyle = rgba(mixc(body, [255, 255, 255], 0.5), 0.30);
   ctx.beginPath();
-  ctx.roundRect(cx - w / 2, bodyTop, w, w * 0.045, [r, r, 0, 0]);
+  ctx.roundRect(bx - w / 2, bodyTop, w, w * 0.045, [r, r, 0, 0]);
   ctx.fill();
 
-  // tail lights
   const tw = w * 0.155, th = w * 0.105;
   for (const s of [-1, 1]) {
-    const lx = cx + s * (w / 2 - tw - w * 0.055);
+    const lx = bx + s * (w / 2 - tw - w * 0.055);
     const ly = bodyTop + w * 0.085;
     const g = ctx.createRadialGradient(lx + tw / 2, ly + th / 2, 0, lx + tw / 2, ly + th / 2, tw * 2.4);
     g.addColorStop(0, 'rgba(255,110,130,.85)');
@@ -488,34 +564,63 @@ function drawCar(S, p) {
     ctx.fill();
   }
 
-  // number plate
   ctx.fillStyle = 'rgba(20,14,30,.72)';
   ctx.beginPath();
-  ctx.roundRect(cx - w * 0.10, bodyTop + w * 0.255, w * 0.20, w * 0.075, w * 0.012);
+  ctx.roundRect(bx - w * 0.10, bodyTop + w * 0.255, w * 0.20, w * 0.075, w * 0.012);
   ctx.fill();
   ctx.fillStyle = 'rgba(255,215,154,.85)';
   ctx.font = `500 ${Math.max(7, w * 0.052)}px Inter, sans-serif`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('♥ 2US', cx, bodyTop + w * 0.294);
+  ctx.fillText('♥ 2US', bx, bodyTop + w * 0.294);
 
-  // bumper
   ctx.fillStyle = rgba([0, 0, 0], 0.28);
   ctx.beginPath();
-  ctx.roundRect(cx - w * 0.44, bodyTop + w * 0.40, w * 0.88, w * 0.055, w * 0.02);
+  ctx.roundRect(bx - w * 0.44, bodyTop + w * 0.40, w * 0.88, w * 0.055, w * 0.02);
   ctx.fill();
 
   ctx.restore();
 }
 
-function render() {
+/* ── one frame ───────────────────────────────────────────────── */
+
+function render(dt) {
+  // steering: the camera chases the centreline, and banks into the bend
+  const lead = 46;
+  camX += (roadX(drive + lead) - camX) * Math.min(1, dt * 2.1);
+  camY += (CAM_H + roadY(drive) * 0.85 - camY) * Math.min(1, dt * 1.8);
+
+  const curvature = (roadX(drive + 55) - roadX(drive - 15)) / 70;
+  const targetRoll = clamp(-curvature * 0.30, -0.13, 0.13);
+  roll += (targetRoll - roll) * Math.min(1, dt * 2.6);
+
   const S = sky(journey);
+  buildSection();
+
   drawSky(S, journey);
   drawClouds(journey);
   drawRidges(S, journey);
-  drawGround(S, journey);
+
+  // bank the world but not the sky — that's what makes it feel like driving
+  ctx.save();
+  ctx.translate(cx, horizonY);
+  ctx.rotate(roll);
+  ctx.translate(-cx, -horizonY);
+  drawTerrain(S);
   drawProps(S, journey);
   drawRoad(S, journey);
+  ctx.restore();
+
   drawCar(S, journey);
+
+  // speed rush at the edges when she scrolls hard
+  if (boost > 0.35 && !REDUCED) {
+    const a = Math.min(0.5, boost * 0.16);
+    const g = ctx.createRadialGradient(cx, H * 0.62, H * 0.22, cx, H * 0.62, H * 0.92);
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(1, `rgba(255,235,220,${a})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 
 /* ───────────────────────────────────────────────────────────────
@@ -544,17 +649,58 @@ function frame(now) {
   prevT = now;
 
   // the world keeps rolling on its own; scrolling pushes it harder
-  const speed = 15 + boost * 26;
+  const speed = 16 + boost * 30;
   drive += speed * dt;
   boost = Math.max(0, boost - dt * 1.9);
 
-  render();
+  updateDepth();
+  render(dt);
   requestAnimationFrame(frame);
 }
 
 /* Reduced motion: paint one still frame, never animate the road. */
-if (REDUCED) render();
+if (REDUCED) { updateDepth(); render(0.016); }
 else requestAnimationFrame(frame);
+
+/* ── pointer parallax: lean the world toward the cursor ───────── */
+function initPointer() {
+  if (REDUCED || !matchMedia('(pointer: fine)').matches) return;
+  addEventListener('pointermove', (e) => {
+    mx = (e.clientX / innerWidth - 0.5) * 2;
+    my = (e.clientY / innerHeight - 0.5) * 2;
+  }, { passive: true });
+  addEventListener('pointerleave', () => { mx = 0; my = 0; }, { passive: true });
+}
+safe('pointer parallax', initPointer);
+
+/* ───────────────────────────────────────────────────────────────
+   3.  3D DEPTH — every block rises and tilts as it crosses the screen
+   ─────────────────────────────────────────────────────────────── */
+
+let depthItems = [];
+
+function cacheDepth() {
+  depthItems = [];
+  document.querySelectorAll('.reveal').forEach(el => {
+    let top = 0, p = el;
+    while (p) { top += p.offsetTop; p = p.offsetParent; }
+    depthItems.push({ el, mid: top + el.offsetHeight / 2, done: false });
+  });
+}
+
+function updateDepth() {
+  if (!depthItems.length) return;
+  const mid = scrollY + innerHeight * 0.5;
+  const span = innerHeight * 0.82;
+  for (const it of depthItems) {
+    const k = (it.mid - mid) / span;
+    if (k < -1.35 || k > 1.35) continue;
+    const kk = clamp(k, -1, 1);
+    it.el.style.setProperty('--dy', (kk * 34).toFixed(1) + 'px');
+    it.el.style.setProperty('--dr', (kk * -9).toFixed(2) + 'deg');
+    it.el.style.setProperty('--dz', (kk * 60).toFixed(1) + 'px');
+  }
+}
 
 /* ───────────────────────────────────────────────────────────────
    3.  REVEALS
@@ -568,6 +714,10 @@ const revealIO = new IntersectionObserver((entries) => {
 
 function initReveals() {
   document.querySelectorAll('.reveal').forEach(el => revealIO.observe(el));
+  cacheDepth();
+  addEventListener('resize', cacheDepth, { passive: true });
+  // the cache is layout-dependent, so refresh once the fonts/images settle
+  addEventListener('load', cacheDepth, { once: true });
 }
 
 /* ───────────────────────────────────────────────────────────────
@@ -701,12 +851,16 @@ function initTilt() {
       const r = el.getBoundingClientRect();
       const dx = (e.clientX - r.left) / r.width  - 0.5;
       const dy = (e.clientY - r.top)  / r.height - 0.5;
+      // compose with the scroll-depth vars instead of replacing them
       el.style.transform =
-        `perspective(900px) rotateX(${(-dy * 6).toFixed(2)}deg) rotateY(${(dx * 6).toFixed(2)}deg) rotate(${base}deg) scale(1.03)`;
+        `translate3d(0, var(--dy,0px), var(--dz,0px)) ` +
+        `rotateX(${(-dy * 7).toFixed(2)}deg) rotateY(${(dx * 8).toFixed(2)}deg) ` +
+        `rotate(${base}deg) translateZ(30px) scale(1.035)`;
     });
 
     el.addEventListener('pointerleave', () => {
-      el.style.transform = `rotate(${base}deg)`;
+      el.style.transform =
+        `translate3d(0, var(--dy,0px), var(--dz,0px)) rotate(${base}deg)`;
     });
   });
 }

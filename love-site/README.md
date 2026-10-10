@@ -122,8 +122,14 @@ Because it's a plain static bundle, it deploys in seconds and costs nothing.
 
 ## What's actually going on
 
-- **The road** is a real 3D projection drawn to `<canvas>` every frame — lane lines,
-  rumble shoulders, roadside trees and lamps receding into fog. No images, no video.
+- **The road is genuinely 3D.** The centreline is a world-space curve that swings ~22m
+  sideways and rolls ~8m over hills, projected to the canvas every frame. The camera
+  lags the centreline (that's the steering) and banks into the bends — the world tilts,
+  the sky doesn't. Lane lines, rumble strips, trees and lamps all follow it.
+- **The whole page has depth.** Every text block and photo rises, tilts and parallaxes
+  as it crosses the screen, on a real `perspective` stage. Photos lift toward you on
+  hover; the boarding pass turns on a vertical axis.
+- **The cursor bends the world** — move the mouse and the vanishing point leans.
 - **Time of day** is driven by scroll position: dawn at the top, midday in the middle,
   golden hour at the gallery, stars by the letter.
 - **The music** is synthesised live with the Web Audio API (a four-chord pad). There is

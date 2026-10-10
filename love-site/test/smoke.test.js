@@ -229,6 +229,23 @@ setTimeout(async () => {
   const emptyMarked = [...d.querySelectorAll('.photo')].filter(p => p.classList.contains('empty')).length;
   results.push(['missing photos marked as empty (' + emptyMarked + '/11)', emptyMarked === 11]);
 
+  // 8d. drive a long way: the road must keep projecting ahead of the camera.
+  // `drive` grows forever, so an absolute-coordinate bug would blank the scene.
+  // `drive` grows without bound. If the road were built in absolute world
+  // coordinates it would slide past Z_FAR and the scene would go blank after
+  // ~13s of driving — so compare draw volume early vs. much later.
+  const early = ctxCalls.total;
+  await new Promise(r => setTimeout(r, 1000));
+  const baseline = ctxCalls.total - early;
+
+  await new Promise(r => setTimeout(r, 16000));       // drive well past Z_FAR
+  const lateStart = ctxCalls.total;
+  await new Promise(r => setTimeout(r, 1000));
+  const late = ctxCalls.total - lateStart;
+
+  results.push(['road survives a long drive (early ' + baseline + ' calls/1s, late ' + late + ')',
+                baseline > 500 && late > baseline * 0.6]);
+
   // 9. every referenced asset actually resolves on the server
   const imgs = [...d.querySelectorAll('.photo img')].map(i => i.getAttribute('src'));
   const missing = [];
