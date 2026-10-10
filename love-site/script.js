@@ -688,9 +688,12 @@ safe('counters', () => document.querySelectorAll('[data-count]').forEach(el => c
 function initTilt() {
   if (!matchMedia('(pointer: fine)').matches || REDUCED) return;
   document.querySelectorAll('[data-tilt]').forEach(el => {
-    const base = el.classList.contains('shot')
-      ? (el.matches('.grid-gallery .shot:nth-child(even)') ? 1.4 : -1.1)
-      : (el.closest('.stop-flip') ? 1.9 : -1.6);
+    // an explicit base wins; otherwise infer from layout position
+    const explicit = parseFloat(el.dataset.tiltBase);
+    const base = Number.isFinite(explicit) ? explicit
+      : el.classList.contains('shot')
+        ? (el.matches('.grid-gallery .shot:nth-child(even)') ? 1.4 : -1.1)
+        : (el.closest('.stop-flip') ? 1.9 : -1.6);
 
     el.style.transition = 'transform .55s cubic-bezier(.16,1,.3,1), box-shadow .55s cubic-bezier(.16,1,.3,1)';
 
@@ -869,6 +872,97 @@ function finish() {
    10.  MISC
    ─────────────────────────────────────────────────────────────── */
 
+/* ───────────────────────────────────────────────────────────────
+   10.  VIDEO PLAYLIST — eight clips, one stage
+   ─────────────────────────────────────────────────────────────── */
+
+const CLIPS = [
+  { src: 'videos/clip-01.mp4', cap: 'the one that started it' },
+  { src: 'videos/clip-02.mp4', cap: 'you, mid-sentence' },
+  { src: 'videos/clip-03.mp4', cap: 'still laughing about it' },
+  { src: 'videos/clip-04.mp4', cap: 'the long one' },
+  { src: 'videos/clip-05.mp4', cap: 'proof you were there' },
+  { src: 'videos/clip-06.mp4', cap: 'the good part' },
+  { src: 'videos/clip-07.mp4', cap: 'you, being ridiculous' },
+  { src: 'videos/clip-08.mp4', cap: 'and then this' },
+];
+
+function initPlaylist() {
+  const reel  = document.getElementById('reel');
+  const stage = document.getElementById('reelStage');
+  const cap   = document.getElementById('reelCap');
+  const list  = document.getElementById('playlist');
+  const note  = document.getElementById('videoNote');
+  if (!reel || !list) return;
+
+  // buttons are shown up front so the section is never an empty box
+  const buttons = CLIPS.map((clip, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'clip';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    b.innerHTML =
+      `<span class="clip-ico">▶</span>` +
+      `<span class="clip-n">${String(i + 1).padStart(2, '0')}</span>` +
+      `<span class="clip-d" data-dur></span>`;
+    list.appendChild(b);
+    return b;
+  });
+
+  function select(i, autoplay) {
+    const clip = CLIPS[i];
+    if (!clip) return;
+
+    if (reel.getAttribute('src') !== clip.src) {
+      reel.setAttribute('src', clip.src);
+      reel.load();
+    }
+    if (cap) cap.innerHTML = `Clip ${String(i + 1).padStart(2, '0')} &mdash; ${clip.cap}`;
+
+    buttons.forEach((b, k) => b.setAttribute('aria-selected', k === i ? 'true' : 'false'));
+
+    if (autoplay) {
+      const p = reel.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});  // autoplay may be blocked
+    }
+  }
+
+  buttons.forEach((b, i) => b.addEventListener('click', () => select(i, true)));
+
+  // fill in each clip's duration once its header loads
+  CLIPS.forEach((clip, i) => {
+    const probe = document.createElement('video');
+    probe.preload = 'metadata';
+    probe.addEventListener('loadedmetadata', () => {
+      const slot = buttons[i].querySelector('[data-dur]');
+      if (!slot || !isFinite(probe.duration)) return;
+      const s = Math.round(probe.duration);
+      slot.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      probe.removeAttribute('src');
+      probe.load();
+    }, { once: true });
+    probe.addEventListener('error', () => { probe.removeAttribute('src'); }, { once: true });
+    probe.src = clip.src;
+  });
+
+  // phone clips are vertical — give them a vertical frame
+  function fitStage() {
+    if (!stage) return;
+    const portrait = reel.videoHeight > reel.videoWidth && reel.videoHeight > 0;
+    stage.classList.toggle('is-portrait', portrait);
+  }
+  reel.addEventListener('loadedmetadata', fitStage);
+
+  // don't shout over the rest of the page
+  new IntersectionObserver((es) => es.forEach(e => {
+    if (!e.isIntersecting && !reel.paused) reel.pause();
+  }), { threshold: 0.3 }).observe(reel);
+
+  select(0, false);
+  if (note) note.hidden = true;
+}
+
 function initMisc() {
   onScroll();
   addEventListener('scroll', updateMap, { passive: true });
@@ -883,22 +977,14 @@ function initMisc() {
     if (img.complete && img.naturalWidth === 0) mark();
   });
 
-  // video note only if the file is missing
+  // if every clip is missing, say so rather than showing a dead player
   const reel = document.getElementById('reel');
   const vNote = document.getElementById('videoNote');
   if (reel && vNote) {
-    const src = reel.querySelector('source');
-    if (src) src.addEventListener('error', () => { vNote.hidden = false; });
+    reel.addEventListener('error', () => { vNote.hidden = false; });
     setTimeout(() => {
-      if (reel.readyState === 0 && reel.networkState === 3) vNote.hidden = false;
-    }, 1400);
-  }
-
-  // pause the reel when it scrolls away
-  if (reel) {
-    new IntersectionObserver((es) => es.forEach(e => {
-      if (!e.isIntersecting && !reel.paused) reel.pause();
-    }), { threshold: 0.35 }).observe(reel);
+      if (reel.networkState === 3 /* NETWORK_NO_SOURCE */ && !reel.currentSrc) vNote.hidden = false;
+    }, 2000);
   }
 }
 
@@ -907,6 +993,7 @@ function initMisc() {
    ─────────────────────────────────────────────────────────────── */
 
 safe('reveals',       initReveals);
+safe('playlist',      initPlaylist);
 safe('hearts',       initHearts);
 safe('photo tilt',   initTilt);
 safe('sound toggle', () => { if (soundBtn) soundBtn.addEventListener('click', onSoundClick); });

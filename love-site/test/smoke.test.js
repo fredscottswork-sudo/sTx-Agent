@@ -10,7 +10,13 @@ const js   = fs.readFileSync(path.join(SITE, 'script.js'), 'utf8');
 
 const errors = [];
 const vc = new VirtualConsole();
-vc.on('jsdomError', e => { const m = e.stack || e.message; if (!/fonts\.(googleapis|gstatic)\.com/.test(m)) errors.push('jsdomError: ' + m); });
+vc.on('jsdomError', e => {
+  const m = e.stack || e.message;
+  // environment limits, not site bugs: sandboxed font CDN + jsdom has no media stack
+  if (/fonts\.(googleapis|gstatic)\.com/.test(m)) return;
+  if (/HTMLMediaElement|Not implemented/.test(m)) return;
+  errors.push('jsdomError: ' + m);
+});
 vc.on('error', (...a) => errors.push('console.error: ' + a.join(' ')));
 vc.on('warn', (...a) => errors.push('WARN: ' + a.join(' ')));
 vc.on('log', () => {});
@@ -223,10 +229,29 @@ setTimeout(async () => {
   const emptyMarked = [...d.querySelectorAll('.photo')].filter(p => p.classList.contains('empty')).length;
   results.push(['missing photos marked as empty (' + emptyMarked + '/11)', emptyMarked === 11]);
 
-  // 9. images referenced
+  // 9. every referenced asset actually resolves on the server
   const imgs = [...d.querySelectorAll('.photo img')].map(i => i.getAttribute('src'));
-  results.push(['photo slots (' + imgs.length + ')', imgs.length === 11]);
-  results.push(['video source present', !!d.querySelector('#reel source')]);
+  const missing = [];
+  for (const src of imgs) {
+    const r = await fetch('http://127.0.0.1:4173/' + src);
+    if (!r.ok) missing.push(src + ' -> ' + r.status);
+  }
+  results.push(['photo slots resolve (' + imgs.length + ')' + (missing.length ? ' MISSING ' + missing.join(',') : ''),
+                imgs.length === 11 && missing.length === 0]);
+
+  // 10. playlist
+  const clips = [...d.querySelectorAll('.clip')];
+  results.push(['playlist buttons built (' + clips.length + ')', clips.length === 8]);
+  const reel = d.getElementById('reel');
+  results.push(['reel loaded clip-01', !!reel && /clip-01\.mp4$/.test(reel.getAttribute('src') || '')]);
+  results.push(['first clip selected', clips[0] && clips[0].getAttribute('aria-selected') === 'true']);
+  if (clips[4]) clips[4].dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  await new Promise(r => setTimeout(r, 50));
+  results.push(['click swaps clip (' + (reel.getAttribute('src') || '') + ')', /clip-05\.mp4$/.test(reel.getAttribute('src') || '')]);
+  results.push(['selection follows click', clips[4] && clips[4].getAttribute('aria-selected') === 'true'
+                && clips[0].getAttribute('aria-selected') === 'false']);
+  const capTxt = d.getElementById('reelCap').textContent;
+  results.push(['caption updates (' + capTxt.trim() + ')', /Clip 05/.test(capTxt)]);
 
   let fail = 0;
   console.log('\n─── smoke results ─────────────────────────────');
