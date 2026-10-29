@@ -1,0 +1,6 @@
+# Python build cache
+__pycache__/
+*.pyc
+
+# OS noise
+.DS_Store
