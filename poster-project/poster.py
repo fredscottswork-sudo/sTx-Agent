@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Welcome-home poster generator (Talent Search Initiative CEO homecoming).
 
-Parametric Pillow layout rendered at print (A3 300dpi) and social sizes.
-Elegant ink / cream / bronze-gold palette (flag colours deliberately kept to a
-whisper). Placeholder assets (photo, TSI logo) are swapped for real files
-automatically when they exist in assets/.
+Premium dark edition: AI-generated charcoal/gold backdrop composited under a
+parametric Pillow layout (A3 300dpi print + social sizes). Placeholder assets
+(photo, TSI logo) swap in automatically when present in assets/.
 """
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -18,12 +17,12 @@ OUT = os.path.join(HERE, "out")
 INK = (23, 24, 26)
 CREAM = (250, 247, 241)
 WHITE = (255, 255, 255)
-GOLD = (176, 130, 42)          # muted bronze-gold accent
-GOLD_SOFT = (214, 178, 106)
-GREY_TXT = (92, 92, 97)
-GREY_SOFT = (132, 132, 136)
-PH_BG = (236, 231, 221)
-PH_FIG = (205, 198, 185)
+GOLD = (176, 130, 42)
+GOLD_SOFT = (216, 182, 112)
+TXT_LIGHT = (206, 206, 211)
+TXT_MID = (176, 176, 182)
+PH_BG = (52, 50, 46)
+PH_FIG = (82, 78, 71)
 
 # ----------------------------------------------------------------- content --
 CONTENT = {
@@ -40,6 +39,7 @@ CONTENT = {
     "footer": "Created by ScottsTechX Enterprises Ltd",
 }
 
+BG_PATH = os.path.join(ASSETS, "bg-premium.png")
 PHOTO_PATH = os.path.join(ASSETS, "ceo-photo.jpg")
 TSI_LOGO = os.path.join(ASSETS, "tsi-logo.png")
 STX_LOGO = os.path.join(ASSETS, "scottstechx-logo.jpg")
@@ -70,7 +70,6 @@ def text_h(f):
 
 
 def trim_whitespace(im, pad_frac=0.02):
-    """Crop away near-white borders of a logo image."""
     rgb = im.convert("RGB")
     g = rgb.convert("L").point(lambda p: 255 if p < 246 else 0)
     bbox = g.getbbox()
@@ -83,32 +82,31 @@ def trim_whitespace(im, pad_frac=0.02):
     return im.crop((l, t, r, b))
 
 
-def fit_image(path, box):
-    im = Image.open(path).convert("RGB")
-    bw, bh = box
+def cover_crop(im, W, H, anchor=0.22):
+    """Resize to cover W×H then crop with a top-biased vertical anchor."""
     iw, ih = im.size
-    sc = max(bw / iw, bh / ih)
+    sc = max(W / iw, H / ih)
     im = im.resize((round(iw * sc), round(ih * sc)), Image.LANCZOS)
     iw, ih = im.size
-    l = (iw - bw) // 2
-    t = (ih - bh) // 2
-    return im.crop((l, t, l + bw, t + bh))
+    l = (iw - W) // 2
+    t = round((ih - H) * anchor)
+    return im.crop((l, t, l + W, t + H))
 
 
 def photo_disc(d_px, s):
-    """Circular portrait (or placeholder silhouette) in an elegant double ring."""
-    ring_ink = round(4 * s)
-    ring_gold = round(11 * s)
+    """Circular portrait (or placeholder) in a gold double ring."""
+    ring_out = round(4 * s)
+    ring_gold = round(12 * s)
     gap = round(9 * s)
-    pad = ring_ink + ring_gold + gap
+    pad = ring_out + ring_gold + gap
     size = d_px + 2 * pad
     layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
     c = size / 2
-    ld.ellipse([0, 0, size, size], fill=INK)
-    ld.ellipse([ring_ink, ring_ink, size - ring_ink, size - ring_ink], fill=GOLD)
-    y2 = ring_ink + ring_gold
-    ld.ellipse([y2, y2, size - y2, size - y2], fill=WHITE)
+    ld.ellipse([0, 0, size, size], fill=GOLD)
+    ld.ellipse([ring_out, ring_out, size - ring_out, size - ring_out], fill=INK)
+    y2 = ring_out + ring_gold
+    ld.ellipse([y2, y2, size - y2, size - y2], fill=CREAM)
     g2 = y2 + gap
     if os.path.exists(PHOTO_PATH):
         ph = fit_image(PHOTO_PATH, (d_px, d_px))
@@ -129,6 +127,18 @@ def photo_disc(d_px, s):
     return layer
 
 
+def fit_image(path, box):
+    im = Image.open(path).convert("RGB")
+    bw, bh = box
+    iw, ih = im.size
+    sc = max(bw / iw, bh / ih)
+    im = im.resize((round(iw * sc), round(ih * sc)), Image.LANCZOS)
+    iw, ih = im.size
+    l = (iw - bw) // 2
+    t = (ih - bh) // 2
+    return im.crop((l, t, l + bw, t + bh))
+
+
 def mono_badge(d_px, s, text, bg, fg, f_size):
     im = Image.new("RGBA", (d_px, d_px), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
@@ -146,46 +156,36 @@ def logo_fitted(path, max_h, max_w):
 
 
 class Layout:
-    """Measures the vertical stack for a given scale s."""
-
     def __init__(self, W, H, s):
         self.W, self.H, self.s = W, H, s
         self.margin = 64 * s
         self.top_pad = 46 * s
-        self.foot_h = 92 * s
+        self.foot_h = 88 * s
         self.f_org = font("Montserrat-SemiBold.ttf", 25 * s)
         self.f_kick = font("Montserrat-Bold.ttf", 20 * s)
-        self.f_script = font("GreatVibes-Regular.ttf", 104 * s)
-        self.f_name = font("Montserrat-ExtraBold.ttf", 82 * s)
+        self.f_script = font("GreatVibes-Regular.ttf", 106 * s)
+        self.f_name = font("Montserrat-ExtraBold.ttf", 86 * s)
         self.f_title = font("Montserrat-SemiBold.ttf", 32 * s)
         self.f_msg = font("Montserrat-Medium.ttf", 29 * s)
         self.f_label = font("Montserrat-Bold.ttf", 23 * s)
         self.f_foot = font("Montserrat-SemiBold.ttf", 30 * s)
         self.hdr_h = 58 * s
         self.d_px = min(470 * s, 0.36 * H)
-        self.disc_size = self.d_px + 2 * (4 + 11 + 9) * s
+        self.disc_size = self.d_px + 2 * (4 + 12 + 9) * s
         self.card_h = 172 * s
-        self.gaps_base = [34 * s, 40 * s, 12 * s, 18 * s, 28 * s, 32 * s, 42 * s]
+        self.gaps_base = [34 * s, 42 * s, 12 * s, 18 * s, 28 * s, 32 * s, 42 * s]
 
-    def name_font_fit(self, d):
-        f = self.f_name
-        w = d.textlength(CONTENT["name"], font=f)
+    def _fit(self, d, text, fname, base, weight_path):
+        f = font(weight_path, base * self.s)
+        w = d.textlength(text, font=f)
         maxw = self.W - 2 * self.margin
         if w > maxw:
-            f = font("Montserrat-ExtraBold.ttf", 82 * self.s * maxw / w)
-        return f
-
-    def title_font_fit(self, d):
-        f = self.f_title
-        w = d.textlength(CONTENT["title"], font=f)
-        maxw = self.W - 2 * self.margin
-        if w > maxw:
-            f = font("Montserrat-SemiBold.ttf", 32 * self.s * maxw / w)
+            f = font(weight_path, base * self.s * maxw / w)
         return f
 
     def heights(self, d):
-        self.f_name = self.name_font_fit(d)
-        self.f_title = self.title_font_fit(d)
+        self.f_name = self._fit(d, CONTENT["name"], "f_name", 86, "Montserrat-ExtraBold.ttf")
+        self.f_title = self._fit(d, CONTENT["title"], "f_title", 32, "Montserrat-SemiBold.ttf")
         self.script_h = text_h(self.f_script)
         self.name_h = text_h(self.f_name)
         self.title_h = text_h(self.f_title)
@@ -195,15 +195,18 @@ class Layout:
         self.stack_h = (self.hdr_h + 2 * self.s + self.disc_size + self.script_h
                         + self.name_h + self.title_h + self.rule_h + self.msg_h
                         + self.spons_h + sum(self.gaps_base))
-        self.avail = self.H - self.top_pad - self.foot_h - 36 * self.s
+        self.avail = self.H - self.top_pad - self.foot_h - 30 * self.s
         return self.stack_h <= self.avail
 
 
 def build(W, H, out_png, pdf=False):
-    img = Image.new("RGBA", (W, H), CREAM + (255,))
+    # ---- backdrop -----------------------------------------------------------
+    if os.path.exists(BG_PATH):
+        img = cover_crop(Image.open(BG_PATH).convert("RGBA"), W, H)
+    else:
+        img = Image.new("RGBA", (W, H), INK + (255,))
     d = ImageDraw.Draw(img)
     s0 = W / 1080.0
-    # auto-fit: shrink scale until the stack fits the available height
     s = s0
     for _ in range(6):
         lo = Layout(W, H, s)
@@ -217,59 +220,66 @@ def build(W, H, out_png, pdf=False):
 
     y = float(L.top_pad)
 
-    # ---- header row -------------------------------------------------------
+    # ---- header row ---------------------------------------------------------
     hy = y + L.hdr_h / 2
     if os.path.exists(TSI_LOGO):
         lg = logo_fitted(TSI_LOGO, L.hdr_h, W * 0.4)
         img.paste(lg, (round(L.margin), round(hy - lg.size[1] / 2)), lg)
-        d.text((L.margin + lg.size[0] + 16 * s, hy), CONTENT["org"], font=L.f_org, fill=INK, anchor="lm")
+        d.text((L.margin + lg.size[0] + 16 * s, hy), CONTENT["org"], font=L.f_org, fill=CREAM, anchor="lm")
     else:
-        bd = mono_badge(round(L.hdr_h), s, "TSI", INK, CREAM, 20 * s)
+        bd = mono_badge(round(L.hdr_h), s, "TSI", GOLD, INK, 20 * s)
         img.paste(bd, (round(L.margin), round(y)), bd)
-        d.text((L.margin + L.hdr_h + 16 * s, hy), CONTENT["org"], font=L.f_org, fill=INK, anchor="lm")
+        d.text((L.margin + L.hdr_h + 16 * s, hy), CONTENT["org"], font=L.f_org, fill=CREAM, anchor="lm")
     kw, _ = tracked_width(d, CONTENT["kicker"], L.f_kick, 4 * s)
     draw_tracked(d, W - L.margin - kw / 2, hy - text_h(L.f_kick) / 2, CONTENT["kicker"],
-                 L.f_kick, GOLD, 4 * s)
+                 L.f_kick, GOLD_SOFT, 4 * s)
     y += L.hdr_h
-    # thin gold hairline under the header
-    d.rectangle([L.margin, y, W - L.margin, y + 2 * s], fill=GOLD_SOFT)
+    d.rectangle([L.margin, y, W - L.margin, y + 2 * s], fill=GOLD)
     y += 2 * s + gaps[0]
 
-    # ---- portrait disc (the hero) ------------------------------------------
+    # ---- portrait disc with glow --------------------------------------------
     disc = photo_disc(round(L.d_px), s)
+    gx = W / 2
+    gy = y + disc.size[0] / 2
+    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gr = disc.size[0] * 0.72
+    gd.ellipse([gx - gr, gy - gr, gx + gr, gy + gr], fill=(216, 182, 112, 70))
+    glow = glow.filter(ImageFilter.GaussianBlur(round(70 * s)))
+    img = Image.alpha_composite(img, glow)
     img.paste(disc, (round(W / 2 - disc.size[0] / 2), round(y)), disc)
+    d = ImageDraw.Draw(img)
     y += disc.size[0] + gaps[1]
 
-    # ---- script + name + title --------------------------------------------
-    d.text((W / 2, y), CONTENT["script"], font=L.f_script, fill=GOLD, anchor="mt")
+    # ---- script + name + title ----------------------------------------------
+    d.text((W / 2, y), CONTENT["script"], font=L.f_script, fill=GOLD_SOFT, anchor="mt")
     y += L.script_h - 22 * s + gaps[2]
-    d.text((W / 2, y), CONTENT["name"], font=L.f_name, fill=INK, anchor="mt")
+    d.text((W / 2, y), CONTENT["name"], font=L.f_name, fill=CREAM, anchor="mt")
     y += L.name_h - 14 * s + gaps[3]
-    d.text((W / 2, y), CONTENT["title"], font=L.f_title, fill=GREY_TXT, anchor="mt")
+    d.text((W / 2, y), CONTENT["title"], font=L.f_title, fill=TXT_LIGHT, anchor="mt")
     y += L.title_h + gaps[4]
 
-    # ---- divider: single gold line with centre diamond ---------------------
+    # ---- divider: gold line + diamond ----------------------------------------
     rw = 150 * s
-    d.rectangle([W / 2 - rw / 2, y, W / 2 + rw / 2, y + L.rule_h], fill=GOLD_SOFT)
-    dm = 7 * s
+    d.rectangle([W / 2 - rw / 2, y, W / 2 + rw / 2, y + L.rule_h], fill=GOLD)
+    dm = 8 * s
     d.polygon([(W / 2, y - dm + L.rule_h / 2), (W / 2 + dm, y + L.rule_h / 2),
-               (W / 2, y + L.rule_h + dm - L.rule_h / 2 + L.rule_h / 2),
-               (W / 2 - dm, y + L.rule_h / 2)], fill=GOLD)
+               (W / 2, y + dm + L.rule_h / 2), (W / 2 - dm, y + L.rule_h / 2)], fill=GOLD_SOFT)
     y += L.rule_h + 10 * s + gaps[5]
 
-    # ---- message ------------------------------------------------------------
+    # ---- message --------------------------------------------------------------
     for line in CONTENT["message"]:
-        d.text((W / 2, y), line, font=L.f_msg, fill=GREY_TXT, anchor="mt")
+        d.text((W / 2, y), line, font=L.f_msg, fill=TXT_MID, anchor="mt")
         y += text_h(L.f_msg) + 10 * s
     y += gaps[6] - 10 * s
 
-    # ---- sponsors -----------------------------------------------------------
+    # ---- sponsors --------------------------------------------------------------
     lw, _ = tracked_width(d, CONTENT["sponsors_label"], L.f_label, 6 * s)
-    draw_tracked(d, W / 2, y, CONTENT["sponsors_label"], L.f_label, GREY_SOFT, 6 * s)
+    draw_tracked(d, W / 2, y, CONTENT["sponsors_label"], L.f_label, TXT_MID, 6 * s)
     ly = y + text_h(L.f_label) / 2
     dash = 60 * s
-    d.rectangle([W / 2 - lw / 2 - dash - 20 * s, ly, W / 2 - lw / 2 - 20 * s, ly + 2 * s], fill=GREY_SOFT)
-    d.rectangle([W / 2 + lw / 2 + 20 * s, ly, W / 2 + lw / 2 + dash + 20 * s, ly + 2 * s], fill=GREY_SOFT)
+    d.rectangle([W / 2 - lw / 2 - dash - 20 * s, ly, W / 2 - lw / 2 - 20 * s, ly + 2 * s], fill=GOLD)
+    d.rectangle([W / 2 + lw / 2 + 20 * s, ly, W / 2 + lw / 2 + dash + 20 * s, ly + 2 * s], fill=GOLD)
     y += text_h(L.f_label) + 18 * s
 
     cards = []
@@ -282,7 +292,6 @@ def build(W, H, out_png, pdf=False):
     cards.append(card)
 
     if os.path.exists(STX_LOGO):
-        # logo ships on its own dark background -> use it as a rounded dark tile
         sx = logo_fitted(STX_LOGO, L.card_h, L.card_h * 1.8)
         m = Image.new("L", sx.size, 0)
         ImageDraw.Draw(m).rounded_rectangle([0, 0, sx.size[0], sx.size[1]],
@@ -292,7 +301,7 @@ def build(W, H, out_png, pdf=False):
     else:
         f_wm = font("Montserrat-Bold.ttf", 34 * s)
         wm = "ScottsTechX"
-        bw = mono_badge(round(72 * s), s, "STX", INK, GOLD, 22 * s)
+        bw = mono_badge(round(72 * s), s, "STX", GOLD, INK, 22 * s)
         twm = d.textlength(wm, font=f_wm)
         cw = round(bw.size[0] + 16 * s + twm + 2 * 30 * s)
         card = Image.new("RGBA", (cw, round(L.card_h)), (0, 0, 0, 0))
@@ -310,18 +319,25 @@ def build(W, H, out_png, pdf=False):
         sh_l = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         ImageDraw.Draw(sh_l).rounded_rectangle(
             [cx, y + 6 * s, cx + c.size[0], y + c.size[1] + 6 * s],
-            radius=18 * s, fill=(30, 25, 15, 70))
-        sh_l = sh_l.filter(ImageFilter.GaussianBlur(round(10 * s)))
+            radius=18 * s, fill=(0, 0, 0, 110))
+        sh_l = sh_l.filter(ImageFilter.GaussianBlur(round(12 * s)))
         img = Image.alpha_composite(img, sh_l)
         img.paste(c, (round(cx), round(y)), c)
+        # thin gold border around every partner card
+        d = ImageDraw.Draw(img)
+        d.rounded_rectangle([cx, y, cx + c.size[0], y + c.size[1]],
+                            radius=18 * s, outline=GOLD, width=round(2.5 * s))
         cx += c.size[0] + gap_c
     d = ImageDraw.Draw(img)
 
-    # ---- footer -------------------------------------------------------------
+    # ---- footer ----------------------------------------------------------------
     fy = H - L.foot_h
-    d.rectangle([0, fy - 3 * s, W, fy], fill=GOLD)
-    d.rectangle([0, fy, W, H], fill=INK)
-    d.text((W / 2, fy + L.foot_h / 2 - 2 * s), CONTENT["footer"], font=L.f_foot, fill=CREAM, anchor="mm")
+    band = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(band).rectangle([0, fy, W, H], fill=(10, 10, 12, 150))
+    img = Image.alpha_composite(img, band)
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, fy, W, fy + 2.5 * s], fill=GOLD)
+    d.text((W / 2, fy + L.foot_h / 2), CONTENT["footer"], font=L.f_foot, fill=CREAM, anchor="mm")
 
     img = img.convert("RGB")
     img.save(out_png, dpi=(300, 300))
