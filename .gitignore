@@ -14,3 +14,8 @@ htmlcov/
 # Local configuration and run data (the example config is tracked).
 stx.config.toml
 .stx/
+
+# Poster project: re-downloadable fonts, uploaded logos and rendered outputs stay out of Git.
+poster-project/fonts/
+poster-project/assets/
+poster-project/out/
