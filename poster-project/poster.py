@@ -2,8 +2,9 @@
 """Welcome-home poster generator (Talent Search Initiative CEO homecoming).
 
 Parametric Pillow layout rendered at print (A3 300dpi) and social sizes.
-Placeholder assets (photo, TSI logo) are swapped for real files automatically
-when they exist in assets/.
+Elegant ink / cream / bronze-gold palette (flag colours deliberately kept to a
+whisper). Placeholder assets (photo, TSI logo) are swapped for real files
+automatically when they exist in assets/.
 """
 import os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -14,26 +15,26 @@ ASSETS = os.path.join(HERE, "assets")
 OUT = os.path.join(HERE, "out")
 
 # ---------------------------------------------------------------- palette ---
-INK = (20, 20, 22)
-CREAM = (251, 247, 239)
+INK = (23, 24, 26)
+CREAM = (250, 247, 241)
 WHITE = (255, 255, 255)
-UG_BLACK = (0, 0, 0)
-UG_YELLOW = (252, 220, 97)
-UG_RED = (217, 0, 0)
-GREY_TXT = (82, 82, 86)
-GREY_SOFT = (125, 125, 129)
-PH_BG = (233, 227, 214)
-PH_FIG = (201, 194, 180)
+GOLD = (176, 130, 42)          # muted bronze-gold accent
+GOLD_SOFT = (214, 178, 106)
+GREY_TXT = (92, 92, 97)
+GREY_SOFT = (132, 132, 136)
+PH_BG = (236, 231, 221)
+PH_FIG = (205, 198, 185)
 
 # ----------------------------------------------------------------- content --
 CONTENT = {
     "org": "TALENT SEARCH INITIATIVE",
+    "kicker": "HOMECOMING · 2026",
     "script": "Welcome home,",
     "name": "[FULL NAME]",
     "title": "Chief Executive Officer, Talent Search Initiative",
     "message": [
-        "Back home. Back to the mission.",
-        "A new chapter for Talent Search Initiative begins in Uganda.",
+        "After an inspiring journey abroad, our leader returns home —",
+        "ready to empower and elevate Uganda's next generation of talent.",
     ],
     "sponsors_label": "SUPPORTED BY",
     "footer": "Created by ScottsTechX Enterprises Ltd",
@@ -95,23 +96,20 @@ def fit_image(path, box):
 
 
 def photo_disc(d_px, s):
-    """Circular photo (or placeholder silhouette) with flag-colour rings."""
-    ring_out = round(5 * s)
-    ring_y = round(13 * s)
-    ring_r = round(13 * s)
-    gap = round(7 * s)
-    pad = ring_out + ring_y + ring_r + gap
+    """Circular portrait (or placeholder silhouette) in an elegant double ring."""
+    ring_ink = round(4 * s)
+    ring_gold = round(11 * s)
+    gap = round(9 * s)
+    pad = ring_ink + ring_gold + gap
     size = d_px + 2 * pad
     layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
     c = size / 2
-    ld.ellipse([0, 0, size, size], fill=UG_BLACK)
-    ld.ellipse([ring_out, ring_out, size - ring_out, size - ring_out], fill=UG_YELLOW)
-    y2 = ring_out + ring_y
-    ld.ellipse([y2, y2, size - y2, size - y2], fill=UG_RED)
-    r2 = y2 + ring_r
-    ld.ellipse([r2, r2, size - r2, size - r2], fill=WHITE)
-    g2 = r2 + gap
+    ld.ellipse([0, 0, size, size], fill=INK)
+    ld.ellipse([ring_ink, ring_ink, size - ring_ink, size - ring_ink], fill=GOLD)
+    y2 = ring_ink + ring_gold
+    ld.ellipse([y2, y2, size - y2, size - y2], fill=WHITE)
+    g2 = y2 + gap
     if os.path.exists(PHOTO_PATH):
         ph = fit_image(PHOTO_PATH, (d_px, d_px))
         mask = Image.new("L", (d_px, d_px), 0)
@@ -123,13 +121,11 @@ def photo_disc(d_px, s):
         ld.ellipse([c - hd / 2, c - d_px * 0.34, c + hd / 2, c - d_px * 0.34 + hd], fill=PH_FIG)
         sw = d_px * 0.62
         ld.ellipse([c - sw / 2, c - d_px * 0.02, c + sw / 2, c - d_px * 0.02 + sw * 0.78], fill=PH_FIG)
-        interior = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        interior.paste(layer, (0, 0), None)
         disc_mask = Image.new("L", (size, size), 0)
         ImageDraw.Draw(disc_mask).ellipse([g2, g2, size - g2, size - g2], fill=255)
-        clipped = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        clipped.paste(interior, (0, 0), disc_mask)
-        layer = Image.composite(clipped, layer, disc_mask)
+        interior = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        interior.paste(layer, (0, 0), disc_mask)
+        layer = Image.composite(interior, layer, disc_mask)
     return layer
 
 
@@ -139,19 +135,6 @@ def mono_badge(d_px, s, text, bg, fg, f_size):
     d.rounded_rectangle([0, 0, d_px, d_px], radius=round(d_px * 0.28), fill=bg)
     f = font("Montserrat-ExtraBold.ttf", f_size)
     d.text((d_px / 2, d_px / 2), text, font=f, fill=fg, anchor="mm")
-    return im
-
-
-def mini_flag(w, h):
-    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    cols = [UG_BLACK, UG_YELLOW, UG_RED] * 2
-    sh = h / 6
-    for i, c in enumerate(cols):
-        d.rectangle([0, i * sh, w, (i + 1) * sh + 1], fill=c)
-    mask = Image.new("L", (w, h), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w, h], radius=round(h * 0.18), fill=255)
-    im.putalpha(mask)
     return im
 
 
@@ -168,27 +151,28 @@ class Layout:
     def __init__(self, W, H, s):
         self.W, self.H, self.s = W, H, s
         self.margin = 64 * s
-        self.top_band = 34 * s
+        self.top_pad = 46 * s
         self.foot_h = 92 * s
         self.f_org = font("Montserrat-SemiBold.ttf", 25 * s)
-        self.f_script = font("GreatVibes-Regular.ttf", 98 * s)
-        self.f_name = font("Montserrat-ExtraBold.ttf", 76 * s)
+        self.f_kick = font("Montserrat-Bold.ttf", 20 * s)
+        self.f_script = font("GreatVibes-Regular.ttf", 104 * s)
+        self.f_name = font("Montserrat-ExtraBold.ttf", 82 * s)
         self.f_title = font("Montserrat-SemiBold.ttf", 32 * s)
-        self.f_msg = font("Montserrat-Medium.ttf", 28 * s)
+        self.f_msg = font("Montserrat-Medium.ttf", 29 * s)
         self.f_label = font("Montserrat-Bold.ttf", 23 * s)
         self.f_foot = font("Montserrat-SemiBold.ttf", 30 * s)
         self.hdr_h = 58 * s
-        self.d_px = min(430 * s, 0.33 * H)
-        self.disc_size = self.d_px + 2 * (5 + 13 + 13 + 7) * s
+        self.d_px = min(470 * s, 0.36 * H)
+        self.disc_size = self.d_px + 2 * (4 + 11 + 9) * s
         self.card_h = 172 * s
-        self.gaps_base = [30 * s, 34 * s, 12 * s, 16 * s, 26 * s, 30 * s, 40 * s]
+        self.gaps_base = [34 * s, 40 * s, 12 * s, 18 * s, 28 * s, 32 * s, 42 * s]
 
     def name_font_fit(self, d):
         f = self.f_name
         w = d.textlength(CONTENT["name"], font=f)
         maxw = self.W - 2 * self.margin
         if w > maxw:
-            f = font("Montserrat-ExtraBold.ttf", 76 * self.s * maxw / w)
+            f = font("Montserrat-ExtraBold.ttf", 82 * self.s * maxw / w)
         return f
 
     def title_font_fit(self, d):
@@ -205,13 +189,13 @@ class Layout:
         self.script_h = text_h(self.f_script)
         self.name_h = text_h(self.f_name)
         self.title_h = text_h(self.f_title)
-        self.rule_h = 6 * self.s
+        self.rule_h = 4 * self.s
         self.msg_h = text_h(self.f_msg) * len(CONTENT["message"]) + 10 * self.s * (len(CONTENT["message"]) - 1)
         self.spons_h = 30 * self.s + 18 * self.s + self.card_h
-        self.stack_h = (self.hdr_h + self.disc_size + self.script_h + self.name_h
-                        + self.title_h + self.rule_h + self.msg_h + self.spons_h
-                        + sum(self.gaps_base))
-        self.avail = self.H - self.top_band - self.foot_h - 40 * self.s - 30 * self.s
+        self.stack_h = (self.hdr_h + 2 * self.s + self.disc_size + self.script_h
+                        + self.name_h + self.title_h + self.rule_h + self.msg_h
+                        + self.spons_h + sum(self.gaps_base))
+        self.avail = self.H - self.top_pad - self.foot_h - 36 * self.s
         return self.stack_h <= self.avail
 
 
@@ -231,13 +215,7 @@ def build(W, H, out_png, pdf=False):
     gaps = [g + extra / len(L.gaps_base) for g in L.gaps_base]
     s = L.s
 
-    y = float(L.top_band + 34 * s)
-
-    # ---- top flag band ----------------------------------------------------
-    cols = [UG_BLACK, UG_YELLOW, UG_RED] * 2
-    sh = L.top_band / 6
-    for i, c in enumerate(cols):
-        d.rectangle([0, i * sh, W, (i + 1) * sh + 1], fill=c)
+    y = float(L.top_pad)
 
     # ---- header row -------------------------------------------------------
     hy = y + L.hdr_h / 2
@@ -249,30 +227,35 @@ def build(W, H, out_png, pdf=False):
         bd = mono_badge(round(L.hdr_h), s, "TSI", INK, CREAM, 20 * s)
         img.paste(bd, (round(L.margin), round(y)), bd)
         d.text((L.margin + L.hdr_h + 16 * s, hy), CONTENT["org"], font=L.f_org, fill=INK, anchor="lm")
-    fl = mini_flag(round(96 * s), round(64 * s))
-    img.paste(fl, (round(W - L.margin - fl.size[0]), round(hy - fl.size[1] / 2)), fl)
-    y += L.hdr_h + gaps[0]
+    kw, _ = tracked_width(d, CONTENT["kicker"], L.f_kick, 4 * s)
+    draw_tracked(d, W - L.margin - kw / 2, hy - text_h(L.f_kick) / 2, CONTENT["kicker"],
+                 L.f_kick, GOLD, 4 * s)
+    y += L.hdr_h
+    # thin gold hairline under the header
+    d.rectangle([L.margin, y, W - L.margin, y + 2 * s], fill=GOLD_SOFT)
+    y += 2 * s + gaps[0]
 
-    # ---- photo disc --------------------------------------------------------
+    # ---- portrait disc (the hero) ------------------------------------------
     disc = photo_disc(round(L.d_px), s)
     img.paste(disc, (round(W / 2 - disc.size[0] / 2), round(y)), disc)
     y += disc.size[0] + gaps[1]
 
     # ---- script + name + title --------------------------------------------
-    d.text((W / 2, y), CONTENT["script"], font=L.f_script, fill=UG_RED, anchor="mt")
-    y += L.script_h - 20 * s + gaps[2]
+    d.text((W / 2, y), CONTENT["script"], font=L.f_script, fill=GOLD, anchor="mt")
+    y += L.script_h - 22 * s + gaps[2]
     d.text((W / 2, y), CONTENT["name"], font=L.f_name, fill=INK, anchor="mt")
     y += L.name_h - 14 * s + gaps[3]
     d.text((W / 2, y), CONTENT["title"], font=L.f_title, fill=GREY_TXT, anchor="mt")
     y += L.title_h + gaps[4]
 
-    # ---- divider: three flag-colour dots ------------------------------------
-    r = 7 * s
-    yc = y + L.rule_h / 2 + 4 * s
-    for i, c in enumerate([UG_BLACK, UG_YELLOW, UG_RED]):
-        cx = W / 2 + (i - 1) * 42 * s
-        d.ellipse([cx - r, yc - r, cx + r, yc + r], fill=c)
-    y += L.rule_h + 8 * s + gaps[5]
+    # ---- divider: single gold line with centre diamond ---------------------
+    rw = 150 * s
+    d.rectangle([W / 2 - rw / 2, y, W / 2 + rw / 2, y + L.rule_h], fill=GOLD_SOFT)
+    dm = 7 * s
+    d.polygon([(W / 2, y - dm + L.rule_h / 2), (W / 2 + dm, y + L.rule_h / 2),
+               (W / 2, y + L.rule_h + dm - L.rule_h / 2 + L.rule_h / 2),
+               (W / 2 - dm, y + L.rule_h / 2)], fill=GOLD)
+    y += L.rule_h + 10 * s + gaps[5]
 
     # ---- message ------------------------------------------------------------
     for line in CONTENT["message"]:
@@ -309,7 +292,7 @@ def build(W, H, out_png, pdf=False):
     else:
         f_wm = font("Montserrat-Bold.ttf", 34 * s)
         wm = "ScottsTechX"
-        bw = mono_badge(round(72 * s), s, "STX", INK, UG_YELLOW, 22 * s)
+        bw = mono_badge(round(72 * s), s, "STX", INK, GOLD, 22 * s)
         twm = d.textlength(wm, font=f_wm)
         cw = round(bw.size[0] + 16 * s + twm + 2 * 30 * s)
         card = Image.new("RGBA", (cw, round(L.card_h)), (0, 0, 0, 0))
@@ -336,8 +319,7 @@ def build(W, H, out_png, pdf=False):
 
     # ---- footer -------------------------------------------------------------
     fy = H - L.foot_h
-    d.rectangle([0, fy - 5 * s, W, fy], fill=UG_YELLOW)
-    d.rectangle([0, fy - 9 * s, W, fy - 5 * s], fill=UG_RED)
+    d.rectangle([0, fy - 3 * s, W, fy], fill=GOLD)
     d.rectangle([0, fy, W, H], fill=INK)
     d.text((W / 2, fy + L.foot_h / 2 - 2 * s), CONTENT["footer"], font=L.f_foot, fill=CREAM, anchor="mm")
 

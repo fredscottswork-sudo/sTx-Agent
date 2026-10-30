@@ -15,7 +15,7 @@ htmlcov/
 stx.config.toml
 .stx/
 
-# Poster project: re-downloadable fonts, uploaded logos and rendered outputs stay out of Git.
+# Poster project: fonts are re-downloadable; preview renders are throwaway.
+# Logos and final rendered posters ARE tracked (deliverables).
 poster-project/fonts/
-poster-project/assets/
-poster-project/out/
+poster-project/out/_prev_*

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Welcome Home Poster — Draft</title>
 <style>
-  :root { --ink:#141416; --cream:#fbf7ef; --yellow:#fcdc61; --red:#d90000; }
+  :root { --ink:#17181a; --cream:#faf7f1; --gold:#b0822a; --red:#b0822a; }
   * { box-sizing:border-box; }
   body {
     margin:0; background:var(--cream); color:var(--ink);
@@ -13,12 +13,7 @@
   }
   header {
     background:var(--ink); color:var(--cream); padding:18px 28px;
-    border-bottom:6px solid var(--red); position:relative;
-  }
-  header::before {
-    content:""; display:block; position:absolute; inset:0 0 auto 0; height:6px;
-    background:repeating-linear-gradient(180deg,
-      #000 0 1px, var(--yellow) 1px 2px, var(--red) 2px 3px);
+    border-bottom:4px solid var(--gold); position:relative;
   }
   header h1 { margin:6px 0 2px; font-size:20px; letter-spacing:.06em; }
   header p { margin:0; font-size:13px; opacity:.75; }
@@ -33,15 +28,21 @@
   }
   figure img { display:block; border-radius:8px; height:auto; }
   figcaption { margin-top:12px; font-size:13px; }
-  figcaption b { display:block; font-size:14px; letter-spacing:.04em; }
-  figcaption a { color:var(--red); text-decoration:none; font-weight:600; }
-  figcaption a:hover { text-decoration:underline; }
+  figcaption b { display:block; font-size:14px; letter-spacing:.04em; margin-bottom:8px; }
+  figcaption a.btn {
+    display:inline-block; margin:3px 4px; padding:9px 18px; border-radius:999px;
+    background:var(--ink); color:var(--cream); text-decoration:none;
+    font-weight:600; font-size:13px; letter-spacing:.03em;
+  }
+  figcaption a.btn:hover { background:var(--red); }
+  figcaption a.btn.alt { background:#fff; color:var(--ink); border:1.5px solid var(--ink); }
+  figcaption a.btn.alt:hover { background:var(--ink); color:var(--cream); }
   .a3 img { width:min(46vw, 520px); }
   .feed img { width:min(38vw, 400px); }
   .story img { width:min(30vw, 330px); }
   footer {
     background:var(--ink); color:var(--cream); text-align:center;
-    padding:14px; font-size:13px; border-top:6px solid var(--yellow);
+    padding:14px; font-size:13px; border-top:4px solid var(--gold);
   }
 </style>
 </head>
@@ -54,20 +55,20 @@
   <figure class="a3">
     <div class="frame"><img src="out/poster_A3_print.png" alt="A3 print poster"></div>
     <figcaption><b>A3 PRINT · 300 dpi</b>
-      <a href="out/poster_A3_print.png" download>PNG</a> ·
-      <a href="out/poster_A3_print.pdf" download>PDF</a>
+      <a class="btn" href="out/poster_A3_print.png" download="welcome-home-poster_A3.png"> Download PNG</a>
+      <a class="btn alt" href="out/poster_A3_print.pdf" download="welcome-home-poster_A3.pdf">⬇ Download PDF</a>
     </figcaption>
   </figure>
   <figure class="feed">
     <div class="frame"><img src="out/poster_social_feed_1080x1350.png" alt="Social feed poster"></div>
     <figcaption><b>SOCIAL FEED · 1080×1350</b>
-      <a href="out/poster_social_feed_1080x1350.png" download>PNG</a>
+      <a class="btn" href="out/poster_social_feed_1080x1350.png" download="welcome-home-poster_feed.png">⬇ Download PNG</a>
     </figcaption>
   </figure>
   <figure class="story">
     <div class="frame"><img src="out/poster_story_1080x1920.png" alt="Story poster"></div>
     <figcaption><b>STORY · 1080×1920</b>
-      <a href="out/poster_story_1080x1920.png" download>PNG</a>
+      <a class="btn" href="out/poster_story_1080x1920.png" download="welcome-home-poster_story.png">⬇ Download PNG</a>
     </figcaption>
   </figure>
 </main>
