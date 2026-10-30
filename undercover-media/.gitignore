@@ -4,3 +4,6 @@ __pycache__/
 
 # OS noise
 .DS_Store
+.env.local
+.env*.local
+.vercel

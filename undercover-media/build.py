@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import content as C
+import seed_export
 
 ROOT = Path(__file__).resolve().parent
 PUBLIC = ROOT / "public"
@@ -1497,6 +1498,8 @@ def main() -> None:
     write(PUBLIC / "listen.html", page_listen())
     write(PUBLIC / "about.html", page_about())
     write(PUBLIC / "assets" / "search-index.json", json.dumps(build_index(), ensure_ascii=False))
+    # the same content library, shaped for the CMS importer + offline fallback
+    write(PUBLIC / "assets" / "seed.json", seed_export.dumps())
     write(PUBLIC / "404.html", layout(
         title="Page not found — UnderCover Media",
         description="That page has moved, or never existed.",
