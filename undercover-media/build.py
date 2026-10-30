@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import html
 import json
+from datetime import datetime, timezone
 import shutil
 import sys
 from datetime import date
@@ -18,6 +19,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import content as C
+import content_source
 import seed_export
 
 ROOT = Path(__file__).resolve().parent
@@ -57,6 +59,15 @@ def dateline() -> str:
 
 def img(name: str, alt: str, base: str = "", sizes: str = "(max-width: 720px) 100vw, 33vw",
         eager: bool = False, cls: str = "") -> str:
+    if not name:
+        return ""
+    klass_attr = f' class="{cls}"' if cls else ""
+    priority = ' fetchpriority="high"' if eager else ""
+    if name.startswith("http"):
+        # media uploaded through the CMS lives in Supabase Storage
+        loading = "eager" if eager else "lazy"
+        return (f'<img src="{name}" alt="{esc(alt)}" width="1400" height="768" '
+                f'loading="{loading}" decoding="async"{priority}{klass_attr}>')
     portrait = name.startswith("portrait")
     large, small = (900, 450) if portrait else (1400, 700)
     w, h = (900, 1264) if portrait else (1400, 768)
@@ -1488,6 +1499,8 @@ def build_index() -> list[dict]:
 
 
 def main() -> None:
+    source = content_source.load()
+    print(f"Content source: {source}")
     copy_assets()
     write(PUBLIC / "index.html", page_home())
     for slug in C.SECTION_ORDER:
@@ -1500,6 +1513,18 @@ def main() -> None:
     write(PUBLIC / "assets" / "search-index.json", json.dumps(build_index(), ensure_ascii=False))
     # the same content library, shaped for the CMS importer + offline fallback
     write(PUBLIC / "assets" / "seed.json", seed_export.dumps())
+    # deployment fingerprint: which source this build used, and when
+    write(PUBLIC / "assets" / "build.json", json.dumps({
+        "source": source,
+        "built_at": datetime.now(timezone.utc).isoformat(),
+        "stories": len(C.STORIES),
+        "videos": len(C.VIDEOS),
+        "shows": len(C.SHOWS),
+    }, indent=1))
+    # public runtime config for the admin app + newsletter form
+    cfg = SRC / "site.config.json"
+    if cfg.exists():
+        shutil.copy2(cfg, PUBLIC / "assets" / "site.config.json")
     write(PUBLIC / "404.html", layout(
         title="Page not found — UnderCover Media",
         description="That page has moved, or never existed.",

@@ -1,0 +1,6 @@
+{
+  "$comment": "Public Supabase configuration. The anon key only grants access permitted by row-level security; never put the service_role key here.",
+  "supabase_url": "https://ayiqeykdcsgwtickgqyc.supabase.co",
+  "supabase_anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5aXFleWtkY3Nnd3RpY2tncXljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzMDkwNTIsImV4cCI6MjEwODg4NTA1Mn0.XRwsG1dS9Z9ITH9AZlRX91glD3uKuSTQK-W4uTJpM4g",
+  "site_url": "https://undercover-media.vercel.app/"
+}
