@@ -1465,6 +1465,10 @@ def copy_assets() -> None:
     favicon = SRC / "favicon.svg"
     if favicon.exists():
         shutil.copy2(favicon, PUBLIC / "assets" / "favicon.svg")
+    # host config travels with the deployed output
+    host_config = SRC / "vercel.json"
+    if host_config.exists():
+        shutil.copy2(host_config, PUBLIC / "vercel.json")
 
 
 def build_index() -> list[dict]:
