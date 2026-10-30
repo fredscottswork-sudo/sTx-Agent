@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>UnderCover Studio — newsroom</title>
+<meta name="theme-color" content="#0b0b0c">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="admin.css">
+<script src="vendor/supabase.js" defer></script>
+<script src="admin.js" defer></script>
+</head>
+<body>
+
+<!-- ── sign in ─────────────────────────────────────────────────────── -->
+<div id="login" class="login" hidden>
+  <div class="login__aside">
+    <a class="login__brand" href="../index.html">
+      <span class="brand-mark">UC</span>
+      <span><strong>UnderCover</strong><em>Media</em></span>
+    </a>
+    <p class="login__tagline">The story beneath the story.</p>
+    <ul class="login__points">
+      <li>Publish to the site, the app and the wire</li>
+      <li>Radio schedule, shows and podcasts</li>
+      <li>Every story, every author, one newsroom</li>
+    </ul>
+    <p class="login__foot">Studio v1.0 · Kampala</p>
+  </div>
+
+  <div class="login__panel">
+    <form id="login-form" class="login__form" autocomplete="on">
+      <h1>Sign in to Studio</h1>
+      <p class="login__sub">Newsroom staff only.</p>
+      <label class="field">
+        <span>Email</span>
+        <input type="email" name="email" required autocomplete="username" placeholder="you@undercover.media">
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input type="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+      </label>
+      <button class="btn btn--primary btn--block" type="submit" id="login-submit">Sign in</button>
+      <p class="form-error" id="login-error" role="alert" hidden></p>
+      <p class="login__hint">Access is granted per staff account. Lost your password? Ask the editor.</p>
+    </form>
+  </div>
+</div>
+
+<!-- ── application ─────────────────────────────────────────────────── -->
+<div id="app" class="app" hidden>
+
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar__brand" href="../index.html" title="View the public site">
+      <span class="brand-mark">UC</span>
+      <span class="sidebar__brand-text"><strong>UnderCover</strong><em>Studio</em></span>
+    </a>
+
+    <nav class="nav" aria-label="Sections">
+      <p class="nav__label">Newsroom</p>
+      <a class="nav__item" href="#overview" data-view="overview"><span class="nav__icon">▦</span>Overview</a>
+      <a class="nav__item" href="#stories" data-view="stories"><span class="nav__icon">▤</span>Stories<em class="nav__count" data-count="stories"></em></a>
+      <a class="nav__item" href="#media" data-view="media"><span class="nav__icon">▧</span>Media library</a>
+
+      <p class="nav__label">Broadcast</p>
+      <a class="nav__item" href="#videos" data-view="videos"><span class="nav__icon">▶</span>Videos</a>
+      <a class="nav__item" href="#shows" data-view="shows"><span class="nav__icon">◉</span>Shows</a>
+      <a class="nav__item" href="#schedule" data-view="schedule"><span class="nav__icon">◷</span>Schedule</a>
+      <a class="nav__item" href="#podcasts" data-view="podcasts"><span class="nav__icon">♪</span>Podcasts</a>
+      <a class="nav__item" href="#presenters" data-view="presenters"><span class="nav__icon">☺</span>Presenters</a>
+
+      <p class="nav__label">Audience</p>
+      <a class="nav__item" href="#subscribers" data-view="subscribers"><span class="nav__icon">✉</span>Newsletter<em class="nav__count" data-count="subscribers"></em></a>
+      <a class="nav__item" href="#messages" data-view="messages"><span class="nav__icon">✎</span>Inbox<em class="nav__count" data-count="messages"></em></a>
+      <a class="nav__item" href="#ticker" data-view="ticker"><span class="nav__icon">≡</span>Ticker</a>
+
+      <p class="nav__label">Settings</p>
+      <a class="nav__item" href="#settings" data-view="settings"><span class="nav__icon">⚙</span>Station settings</a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="who">
+        <span class="who__avatar" id="who-avatar">NE</span>
+        <span class="who__meta"><strong id="who-name">Editor</strong><small id="who-role">owner</small></span>
+      </div>
+      <button class="btn btn--ghost btn--sm" id="sign-out" type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="btn btn--icon topbar__menu" id="menu-toggle" type="button" aria-label="Menu">☰</button>
+      <div class="topbar__title">
+        <h1 id="view-title">Overview</h1>
+        <p id="view-sub">Today in the newsroom</p>
+      </div>
+      <div class="topbar__actions">
+        <a class="btn btn--ghost btn--sm" href="../index.html" target="_blank" rel="noopener">View site ↗</a>
+        <button class="btn btn--primary btn--sm" id="publish" type="button">Publish site</button>
+      </div>
+    </header>
+    <div class="view" id="view" tabindex="-1"></div>
+  </main>
+
+  <div class="scrim" id="scrim" hidden></div>
+</div>
+
+<!-- ── editor drawer ───────────────────────────────────────────────── -->
+<div class="drawer" id="drawer" hidden aria-hidden="true">
+  <div class="drawer__head">
+    <div>
+      <p class="drawer__eyebrow" id="drawer-eyebrow">Edit</p>
+      <h2 id="drawer-title">Story</h2>
+    </div>
+    <button class="btn btn--icon" id="drawer-close" type="button" aria-label="Close">✕</button>
+  </div>
+  <form class="drawer__body" id="drawer-form"></form>
+  <div class="drawer__foot">
+    <button class="btn btn--danger btn--sm" id="drawer-delete" type="button" hidden>Delete</button>
+    <span class="drawer__spacer"></span>
+    <button class="btn btn--ghost btn--sm" id="drawer-cancel" type="button">Cancel</button>
+    <button class="btn btn--primary btn--sm" id="drawer-save" type="submit" form="drawer-form">Save</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+</body>
+</html>

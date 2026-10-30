@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://undercover.media/sitemap.xml
