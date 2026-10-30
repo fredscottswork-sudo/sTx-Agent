@@ -457,8 +457,40 @@
 
   /* --------------------------------------------------------- Newsletter -- */
 
+  /* --------------------------------------------------- Supabase bridge -- */
+  /* The site is static, but audience actions write straight to the CMS. */
+  let siteConfig;
+  const getConfig = async () => {
+    if (siteConfig !== undefined) return siteConfig;
+    try {
+      const res = await fetch(BASE + "assets/site.config.json", { cache: "force-cache" });
+      siteConfig = res.ok ? await res.json() : null;
+    } catch (_) {
+      siteConfig = null;
+    }
+    return siteConfig;
+  };
+  const rest = async (path, options) => {
+    const cfg = await getConfig();
+    if (!cfg || !cfg.supabase_url) return null;
+    try {
+      return await fetch(cfg.supabase_url + "/rest/v1/" + path, {
+        method: (options && options.method) || "GET",
+        body: options && options.body,
+        headers: {
+          apikey: cfg.supabase_anon_key,
+          Authorization: "Bearer " + cfg.supabase_anon_key,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+      });
+    } catch (_) {
+      return null;
+    }
+  };
+
   $$("[data-newsletter]").forEach((form) => {
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const input = $("input[type=email]", form);
       if (!input || !input.value.includes("@")) {
@@ -466,10 +498,37 @@
         if (input) input.focus();
         return;
       }
-      toast("Thanks! This is a prototype, so no address was stored.");
-      form.reset();
+      const btn = form.querySelector("button");
+      if (btn) btn.disabled = true;
+      const res = await rest("subscribers", {
+        method: "POST",
+        body: JSON.stringify({ email: input.value.trim(), source: "website" }),
+      });
+      if (btn) btn.disabled = false;
+      if (res && res.status === 409) {
+        toast("You are already on the list — thank you.");
+        form.reset();
+      } else if (res && res.ok) {
+        toast("You are on the list. The Cover Note lands on Monday.");
+        form.reset();
+      } else if (res) {
+        toast("Something went wrong. Please try again.");
+      } else {
+        toast("Thanks! Newsletter sign-up is not connected yet.");
+        form.reset();
+      }
     });
   });
+
+  (async function trackView() {
+    if (!document.querySelector(".article-head")) return;
+    const slug = location.pathname.replace(/\/+$/, "").split("/").pop();
+    if (!slug) return;
+    await rest("rpc/increment_story_view", {
+      method: "POST",
+      body: JSON.stringify({ story_slug: slug }),
+    });
+  })();
 
   /* ------------------------------------------------------- Homepage rail -- */
 
