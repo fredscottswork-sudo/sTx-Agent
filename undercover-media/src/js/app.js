@@ -226,7 +226,57 @@
     a.preload = "none";
     a.src = STREAM_URL;
     return a;
+  
+  /* ── Listen to this article (Web Speech API) ─────────────────────── */
+  (function readAloud() {
+    const btn = document.querySelector("[data-read-aloud]");
+    if (!btn) return;
+    if (!("speechSynthesis" in window) || !window.SpeechSynthesisUtterance) {
+      btn.remove();
+      return;
+    }
+    const article = document.querySelector("article");
+    const text = () => {
+      if (!article) return "";
+      const parts = [];
+      const h1 = article.querySelector("h1");
+      if (h1) parts.push(h1.textContent.trim());
+      const deck = article.querySelector(".article-head__deck");
+      if (deck) parts.push(deck.textContent.trim());
+      article.querySelectorAll("p, h2, blockquote, li").forEach((el) => {
+        if (el.closest(".share, .article-byline, .most, .side-box, .newsletter-card, aside, footer, nav")) return;
+        const t = el.textContent.trim();
+        if (t) parts.push(t);
+      });
+      return parts.join(". ");
+    };
+    let speaking = false;
+    const reset = () => {
+      speaking = false;
+      btn.classList.remove("is-on");
+      btn.setAttribute("aria-pressed", "false");
+      btn.setAttribute("aria-label", "Listen to this article");
+    };
+    btn.addEventListener("click", () => {
+      if (speaking) { window.speechSynthesis.cancel(); reset(); return; }
+      const body = text();
+      if (!body) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(body);
+      utter.lang = "en-GB";
+      utter.rate = 1;
+      utter.onend = reset;
+      utter.onerror = reset;
+      window.speechSynthesis.speak(utter);
+      speaking = true;
+      btn.classList.add("is-on");
+      btn.setAttribute("aria-pressed", "true");
+      btn.setAttribute("aria-label", "Stop reading");
+    });
+    window.addEventListener("pagehide", () => window.speechSynthesis.cancel());
   })();
+
+})();
 
   function setPlaying(playing) {
     state.playing = playing;
@@ -427,4 +477,54 @@
   $$("[data-clock]").forEach((el) => {
     el.textContent = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   });
+
+  /* ── Listen to this article (Web Speech API) ─────────────────────── */
+  (function readAloud() {
+    const btn = document.querySelector("[data-read-aloud]");
+    if (!btn) return;
+    if (!("speechSynthesis" in window) || !window.SpeechSynthesisUtterance) {
+      btn.remove();
+      return;
+    }
+    const article = document.querySelector("article");
+    const text = () => {
+      if (!article) return "";
+      const parts = [];
+      const h1 = article.querySelector("h1");
+      if (h1) parts.push(h1.textContent.trim());
+      const deck = article.querySelector(".article-head__deck");
+      if (deck) parts.push(deck.textContent.trim());
+      article.querySelectorAll("p, h2, blockquote, li").forEach((el) => {
+        if (el.closest(".share, .article-byline, .most, .side-box, .newsletter-card, aside, footer, nav")) return;
+        const t = el.textContent.trim();
+        if (t) parts.push(t);
+      });
+      return parts.join(". ");
+    };
+    let speaking = false;
+    const reset = () => {
+      speaking = false;
+      btn.classList.remove("is-on");
+      btn.setAttribute("aria-pressed", "false");
+      btn.setAttribute("aria-label", "Listen to this article");
+    };
+    btn.addEventListener("click", () => {
+      if (speaking) { window.speechSynthesis.cancel(); reset(); return; }
+      const body = text();
+      if (!body) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(body);
+      utter.lang = "en-GB";
+      utter.rate = 1;
+      utter.onend = reset;
+      utter.onerror = reset;
+      window.speechSynthesis.speak(utter);
+      speaking = true;
+      btn.classList.add("is-on");
+      btn.setAttribute("aria-pressed", "true");
+      btn.setAttribute("aria-label", "Stop reading");
+    });
+    window.addEventListener("pagehide", () => window.speechSynthesis.cancel());
+  })();
+
 })();

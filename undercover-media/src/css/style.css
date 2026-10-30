@@ -2704,3 +2704,112 @@ body.player-open .toast { bottom: 100px; }
   .shortcut__label b { font-size: 11.5px; }
   .shortcut__label span { font-size: 9px; }
 }
+
+/* =====================================================================
+   Editorial polish — added with the Studio release.
+   Refines rhythm, hierarchy and interaction without changing structure.
+   ===================================================================== */
+
+/* type: tighter display tracking, calmer body copy ------------------- */
+.sec__title { letter-spacing: -0.025em; }
+.sec__sub { color: var(--muted, #6b6a66); }
+.article-head h1 { letter-spacing: -0.028em; text-wrap: balance; }
+.lead h1 { letter-spacing: -0.03em; text-wrap: balance; }
+.page-head h1 { letter-spacing: -0.03em; }
+.card__title { text-wrap: pretty; }
+p, .card__deck, .article-head__deck { text-wrap: pretty; }
+
+/* section headers read like a masthead rule ------------------------- */
+.sec__head { position: relative; }
+.sec__head::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--ink) 0 64px, rgba(11, 11, 12, .12) 64px 100%);
+}
+.sec__head::before {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -1px;
+  width: 64px; height: 2px;
+  background: var(--red);
+  z-index: 1;
+}
+
+/* cards: quiet lift, clear affordance ------------------------------- */
+.card { transition: transform .28s var(--ease), box-shadow .28s var(--ease); border-radius: 2px; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px -18px rgba(11, 11, 12, .45); }
+.card__title a { background-image: linear-gradient(var(--red), var(--red));
+  background-size: 0 1px; background-position: 0 100%; background-repeat: no-repeat;
+  transition: background-size .28s var(--ease), color .18s var(--ease); }
+.card:hover .card__title a { background-size: 100% 1px; }
+.card__media { overflow: hidden; border-radius: 2px; }
+
+/* most read: numeral chips ------------------------------------------ */
+.most__item { position: relative; }
+.most__item::before { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+/* video ------------------------------------------------------------- */
+.video-card__play { transition: transform .3s var(--ease), background-color .3s var(--ease); }
+.video-card:hover .video-card__play { transform: scale(1.08); background: var(--red); }
+
+/* buttons ----------------------------------------------------------- */
+.btn { transition: transform .16s var(--ease), background-color .18s var(--ease),
+  color .18s var(--ease), border-color .18s var(--ease), box-shadow .18s var(--ease); }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn--ghost:hover { border-color: var(--ink); }
+
+/* share rail + listen-aloud ----------------------------------------- */
+.share__btn { transition: background-color .18s var(--ease), color .18s var(--ease),
+  border-color .18s var(--ease), transform .18s var(--ease); }
+.share__btn:hover { transform: translateY(-1px); }
+.share__btn--audio.is-on { background: var(--red); border-color: var(--red); color: #fff; }
+.share__btn--audio.is-on svg { animation: pulse-audio 1.6s ease-in-out infinite; }
+@keyframes pulse-audio { 50% { opacity: .45; } }
+
+/* live indicators --------------------------------------------------- */
+.live-dot { animation: live-breathe 2.4s ease-in-out infinite; }
+@keyframes live-breathe { 50% { box-shadow: 0 0 0 5px rgba(225, 6, 0, .12); } }
+
+/* newsletter + page headers ----------------------------------------- */
+.newsletter-card { background-image: radial-gradient(120% 140% at 100% 0%, rgba(225, 6, 0, .16), transparent 55%); }
+.page-head { background-image: linear-gradient(180deg, rgba(11, 11, 12, .04), transparent 70%); }
+
+/* links ------------------------------------------------------------- */
+.link-arrow { transition: gap .2s var(--ease), color .2s var(--ease); }
+.link-arrow:hover { gap: .55em; }
+
+/* focus ------------------------------------------------------------- */
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* article body: comfortable measure + pull quotes -------------------- */
+@media (min-width: 900px) {
+  .article-body p, article p { max-width: 68ch; }
+}
+blockquote { position: relative; }
+blockquote::before {
+  content: "";
+  position: absolute;
+  left: -18px; top: .2em;
+  width: 3px; height: calc(100% - .4em);
+  background: var(--red);
+}
+@media (max-width: 640px) {
+  blockquote::before { left: -12px; }
+}
+
+/* subtle scrollbar on rails ----------------------------------------- */
+.rail-onair, .mm__grid { scrollbar-width: thin; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .btn, .video-card__play, .share__btn { transition: none; }
+  .card:hover { transform: none; }
+  .live-dot { animation: none; }
+}

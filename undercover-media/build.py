@@ -408,6 +408,7 @@ def footer(base: str) -> str:
         <a href="{base}about.html#standards">Editorial standards</a>
         <a href="{base}about.html#contact">Contact</a>
         <a href="{base}about.html#advertise">Advertise</a>
+        <a href="{base}admin/index.html" rel="nofollow">Studio login</a>
       </nav>
     </div>
   </div>
@@ -988,6 +989,7 @@ def page_article(story: dict) -> str:
           <i class="dot"></i>{esc(story['location'])}
         </div>
         <div class="share">
+          <button class="share__btn share__btn--audio" type="button" data-read-aloud aria-pressed="false" aria-label="Listen to this article">{icon("play", 14)}</button>
           <button class="share__btn" type="button" data-share="copy" aria-label="Copy link">{icon("link", 14)}</button>
           <a class="share__btn" href="https://wa.me/?text={share_text}%20{quote(share_url)}" target="_blank" rel="noopener" aria-label="Share on WhatsApp">{icon("whatsapp", 14)}</a>
           <a class="share__btn" href="https://twitter.com/intent/tweet?url={quote(share_url)}&text={share_text}" target="_blank" rel="noopener" aria-label="Share on X">{icon("x", 14)}</a>
@@ -1471,6 +1473,9 @@ def copy_assets() -> None:
     shutil.copytree(SRC / "css", PUBLIC / "assets" / "css")
     shutil.copytree(SRC / "js", PUBLIC / "assets" / "js")
     shutil.copytree(SRC / "fonts", PUBLIC / "assets" / "fonts")
+    admin = SRC / "admin"
+    if admin.exists():
+        shutil.copytree(admin, PUBLIC / "admin")
     (PUBLIC / "assets" / "img").mkdir(parents=True)
     for f in (SRC / "images" / "opt").glob("*.jpg"):
         shutil.copy2(f, PUBLIC / "assets" / "img" / f.name)
