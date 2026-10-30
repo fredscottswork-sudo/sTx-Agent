@@ -618,7 +618,7 @@
     }
     if (f.type === 'image') {
       return `<div class="field${wide}">${label}
-        <img class="thumb" alt="" src="${esc(value || '')}" style="${value ? '' : 'display:none'}">
+        <img class="thumb" alt=""${value ? ` src="${esc(value)}"` : ''} style="${value ? '' : 'display:none'}">
         <div class="upload">
           <input type="text" id="${id}" name="${f.key}" value="${esc(value ?? '')}" placeholder="assets/img/name-700.jpg or https://…">
           <button type="button" class="btn btn--ghost btn--sm" data-upload="${f.key}">Upload…</button>
