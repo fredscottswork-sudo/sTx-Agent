@@ -317,7 +317,7 @@ def video_modal() -> str:
 <dialog class="video-modal" id="video-modal" aria-label="Video player">
   <button class="video-modal__close" type="button" data-video-close aria-label="Close video">{icon("close", 16)}</button>
   <div class="video-modal__media">
-    <img id="video-modal-image" src="" alt="" width="1400" height="768">
+    <img id="video-modal-image" alt="" width="1400" height="768">
     <div class="video-modal__overlay">
       <div class="video-card__play"><span>{icon("play", 15)}</span></div>
       <p class="video-modal__note"><b>Playback is not connected in this prototype.</b>

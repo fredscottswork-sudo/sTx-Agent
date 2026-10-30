@@ -9,6 +9,15 @@ Black, white and red. Built by hand, no frameworks, no trackers, no external req
 
 ---
 
+## Live deployment
+
+- **Production:** <https://undercover-media.vercel.app>
+- **Vercel project:** `undercover-media` (team *fredscottswork-1879's projects*)
+- **Root directory:** `undercover-media/public` — no build step, the generated
+  files are served as-is; `src/vercel.json` ships with the output
+- Pushes to the branch/main trigger a fresh deployment; `public/` must be rebuilt
+  and committed (`python3 build.py`) before pushing content changes
+
 ## Run it
 
 ```bash
