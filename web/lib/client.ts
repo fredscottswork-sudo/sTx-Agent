@@ -68,8 +68,8 @@ export async function copyText(text: string): Promise<void> {
   }
 }
 
-export function downloadText(filename: string, content: string): void {
-  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+export function downloadText(filename: string, content: string, mime = "text/markdown;charset=utf-8"): void {
+  const blob = new Blob([content], { type: mime });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = filename;

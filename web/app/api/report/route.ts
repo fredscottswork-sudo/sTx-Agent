@@ -1,5 +1,6 @@
 import type { ReportPayload } from "@/lib/types";
 import { buildFindingsText, buildHeuristicReport, SYSTEM_PROMPT } from "@/lib/report";
+import { exposureScore } from "@/lib/score";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -16,6 +17,7 @@ export async function POST(req: Request) {
   }
 
   const findings = buildFindingsText(payload);
+  const scoreInfo = exposureScore(payload);
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (apiKey) {
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
           const text = data.choices?.[0]?.message?.content?.trim();
           if (text) {
             return Response.json(
-              { engine: "llm", model, text, findings },
+              { engine: "llm", model, text, findings, score: scoreInfo.score, factors: scoreInfo.factors },
               { headers: { "Cache-Control": "no-store" } },
             );
           }
@@ -62,6 +64,8 @@ export async function POST(req: Request) {
             model: null,
             text: heuristic,
             findings,
+            score: scoreInfo.score,
+            factors: scoreInfo.factors,
             llmNote: `LLM synthesis unavailable (HTTP ${res.status}); generated heuristic report instead.`,
           },
           { headers: { "Cache-Control": "no-store" } },
@@ -80,6 +84,8 @@ export async function POST(req: Request) {
       model: null,
       text: buildHeuristicReport(payload, findings),
       findings,
+      score: scoreInfo.score,
+      factors: scoreInfo.factors,
       llmNote: apiKey ? undefined : "No OPENAI_API_KEY configured — heuristic synthesis used.",
     },
     { headers: { "Cache-Control": "no-store" } },

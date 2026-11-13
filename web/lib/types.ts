@@ -1,12 +1,17 @@
 // STX Trace — shared types
 export type CheckStatus = "found" | "missing" | "unknown" | "skipped";
+export type Confidence = "high" | "medium" | "low";
 
 export interface SiteResult {
   site: string;
   url: string;
   category: string;
   status: CheckStatus;
+  /** How trustworthy the classification is (echo/verification based). */
+  confidence?: Confidence;
   note?: string;
+  /** Set when the hit came from a derived username variant. */
+  variant?: string;
   ms: number;
 }
 
@@ -21,6 +26,25 @@ export interface GravatarAccount {
   url: string;
 }
 
+export interface EmailDnsReport {
+  ns: string[];
+  a: string[];
+  spf: string | null;
+  dmarc: string | null;
+  dmarcPolicy: string | null;
+  bimi: boolean;
+  dkim: { selector: string; present: boolean }[];
+}
+
+export interface RdapReport {
+  registrar: string | null;
+  registrantOrg: string | null;
+  created: string | null;
+  expires: string | null;
+  status: string[];
+  raw: boolean;
+}
+
 export interface EmailReport {
   email: string;
   valid: boolean;
@@ -29,8 +53,13 @@ export interface EmailReport {
   domain: string;
   mx: { exchange: string; priority: number }[];
   mxOk: boolean;
+  dns: EmailDnsReport | null;
+  rdap: RdapReport | null;
+  /** Plausible address formats for this domain (derived from local-part + provider patterns). */
+  formats: string[];
   gravatar: {
     hash: string;
+    imageUrl: string;
     hasAvatar: boolean;
     profileUrl: string | null;
     displayName?: string;
@@ -51,10 +80,12 @@ export interface PhoneReport {
   e164: string | null;
   international: string | null;
   national: string | null;
+  rfc3966: string | null;
   country: string | null;
   countryName: string | null;
   countryCode: string | null;
   type: string | null;
+  timezones: string[];
   notes: string[];
   generatedAt: string;
 }
@@ -74,10 +105,40 @@ export interface OrcidCandidate {
   url: string;
 }
 
+export interface WikipediaCandidate {
+  title: string;
+  url: string;
+  extract: string;
+}
+
+export interface SeUserCandidate {
+  display_name: string;
+  link: string;
+  reputation: number;
+  site: string;
+}
+
+export interface GhUserCandidate {
+  login: string;
+  url: string;
+}
+
+export interface HnCandidate {
+  author: string;
+  title: string;
+  url: string;
+}
+
 export interface IdentityReport {
   name: string;
   wikidata: WikidataCandidate[];
+  wikipedia: WikipediaCandidate[];
   orcid: OrcidCandidate[];
+  stackexchange: SeUserCandidate[];
+  github: GhUserCandidate[];
+  gitlab: GhUserCandidate[];
+  hackernews: HnCandidate[];
+  dorks: { engine: string; url: string }[];
   notes: string[];
   generatedAt: string;
 }
@@ -88,6 +149,12 @@ export interface FaceResult {
   verdict: "match" | "likely" | "uncertain" | "different";
   verdictLabel: string;
   explanation: string;
+  mode?: "fast" | "accurate";
+  faceCountA?: number;
+  faceCountB?: number;
+  age?: string;
+  gender?: string;
+  expression?: string;
 }
 
 export interface ReportPayload {

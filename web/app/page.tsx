@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ReportPayload } from "@/lib/types";
-import { EmailPanel, IdentityPanel, PhonePanel, ReportPanel, UsernamePanel } from "@/components/panels";
+import { UsernamePanel } from "@/components/username-panel";
+import { EmailPanel } from "@/components/email-panel";
+import { PhonePanel } from "@/components/phone-panel";
+import { IdentityPanel } from "@/components/identity-panel";
+import { ReportPanel } from "@/components/report-panel";
 import { FacePanel } from "@/components/face-panel";
 
 type TabId = "username" | "email" | "phone" | "identity" | "face" | "report";
@@ -43,6 +47,8 @@ export default function Home() {
     findings.face,
   ].filter(Boolean).length;
 
+  const foundCount = findings.username?.results?.filter((r) => r.status === "found").length ?? 0;
+
   return (
     <div className="app">
       <header className="topbar">
@@ -54,6 +60,7 @@ export default function Home() {
           </div>
         </div>
         <div className="top-actions">
+          {foundCount > 0 && <span className="pill good">@{foundCount} hits</span>}
           <span className="pill info">modules run: {readyCount}/5</span>
           <button className="btn btn-ghost btn-sm" onClick={() => setAgreed(false)}>
             Terms
@@ -63,16 +70,16 @@ export default function Home() {
 
       <div className="flowbar">
         <span className="flow-chip">
-          <b>1</b> @username sweep
+          <b>1</b> @username sweep · 230 sites
         </span>
         <span className="flow-chip">
-          <b>2</b> email · phone · identity
+          <b>2</b> email · phone · identity ×7 sources
         </span>
         <span className="flow-chip">
-          <b>3</b> AI face verification
+          <b>3</b> AI face verify (fast/accurate)
         </span>
         <span className="flow-chip">
-          <b>4</b> synthesized report
+          <b>4</b> exposure score + AI report
         </span>
       </div>
 
