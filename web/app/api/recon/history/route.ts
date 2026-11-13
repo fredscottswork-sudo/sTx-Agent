@@ -24,26 +24,41 @@ async function runHistory(domain: string, send: (o: unknown) => void) {
     `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(domain)}/*` +
     `&output=json&fl=original,timestamp,statuscode,mimetype&collapse=urlkey` +
     `&filter=statuscode:200&limit=${CDX_LIMIT}`;
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 28_000);
   let rows: string[][] = [];
-  try {
-    const res = await fetch(cdx, {
-      signal: ctl.signal,
-      cache: "no-store",
-      headers: { "User-Agent": RECON_UA },
-    });
-    if (!res.ok) throw new Error(`archive.org HTTP ${res.status}`);
-    const json = (await res.json()) as string[][];
-    rows = Array.isArray(json) ? json.slice(1) : [];
-  } catch (e) {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 28_000);
+    try {
+      const res = await fetch(cdx, {
+        signal: ctl.signal,
+        cache: "no-store",
+        headers: { "User-Agent": RECON_UA, Accept: "application/json" },
+      });
+      if (res.ok) {
+        const json = (await res.json()) as string[][];
+        rows = Array.isArray(json) ? json.slice(1) : [];
+        lastErr = null;
+        break;
+      }
+      lastErr = new Error(`archive.org HTTP ${res.status}`);
+      if (res.status === 429 || res.status >= 500) {
+        await new Promise((r) => setTimeout(r, 1200));
+      } else break;
+    } catch (e) {
+      lastErr = e;
+      await new Promise((r) => setTimeout(r, 800));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  if (lastErr) {
+    const e = lastErr;
     send({
       type: "error",
       message: `Wayback lookup failed: ${e instanceof Error ? (e.name === "AbortError" ? "timeout" : e.message) : "unknown error"}`,
     });
     return;
-  } finally {
-    clearTimeout(timer);
   }
 
   send({ type: "received", count: rows.length, capped: rows.length >= CDX_LIMIT });

@@ -63,34 +63,36 @@ async function fetchCt(domain: string, deadline: number): Promise<{
 }> {
   const t0 = Date.now();
   const budget = Math.min(24_000, Math.max(2_000, deadline - Date.now()));
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), budget);
-  try {
-    const res = await fetch(`https://crt.sh/?q=%25.${domain}&output=json`, {
-      signal: ctl.signal,
-      headers: { "User-Agent": RECON_UA },
-    });
-    if (!res.ok) throw new Error(`crt.sh HTTP ${res.status}`);
-    const text = await res.text();
-    const rows = JSON.parse(text.slice(0, 4_000_000)) as { name_value?: string }[];
-    const set = new Set<string>();
-    for (const r of rows) {
-      for (const raw of (r.name_value || "").split("\n")) {
-        const n = raw.trim().toLowerCase().replace(/^\*\./, "");
-        if (n === domain || n.endsWith(`.${domain}`)) set.add(n);
+  let lastErr = "";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), budget);
+    try {
+      const res = await fetch(`https://crt.sh/?q=%25.${domain}&output=json`, {
+        signal: ctl.signal,
+        headers: { "User-Agent": RECON_UA },
+      });
+      if (!res.ok) throw new Error(`crt.sh HTTP ${res.status}`);
+      const text = await res.text();
+      const rows = JSON.parse(text.slice(0, 4_000_000)) as { name_value?: string }[];
+      const set = new Set<string>();
+      for (const r of rows) {
+        for (const raw of (r.name_value || "").split("\n")) {
+          const n = raw.trim().toLowerCase().replace(/^\*\./, "");
+          if (n === domain || n.endsWith(`.${domain}`)) set.add(n);
+        }
+        if (set.size > 600) break;
       }
-      if (set.size > 600) break;
+      return { subs: [...set].slice(0, 400), ms: Date.now() - t0 };
+    } catch (e) {
+      lastErr = e instanceof Error ? (e.name === "AbortError" ? "timeout" : e.message) : "failed";
+      if (Date.now() - t0 > budget - 2500) break;
+      await new Promise((r) => setTimeout(r, 1000));
+    } finally {
+      clearTimeout(timer);
     }
-    return { subs: [...set].slice(0, 400), ms: Date.now() - t0 };
-  } catch (e) {
-    return {
-      subs: [],
-      ms: Date.now() - t0,
-      error: e instanceof Error ? (e.name === "AbortError" ? "timeout" : e.message) : "failed",
-    };
-  } finally {
-    clearTimeout(timer);
   }
+  return { subs: [], ms: Date.now() - t0, error: lastErr || "failed" };
 }
 
 async function probeHost(host: string, deadline: number): Promise<HostProbe> {
