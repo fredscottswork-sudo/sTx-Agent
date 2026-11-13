@@ -1,0 +1,54 @@
+name: image-search-e2e
+
+# On-demand end-to-end test of the production /api/image hosting path:
+# upload a generated PNG -> receive expiring signed URL -> fetch it -> expect 200.
+# Manual trigger only (workflow_dispatch) so it never runs on push.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate test image and call production API
+        id: upload
+        run: |
+          python3 - <<'PY' > /tmp/resp.json
+          import zlib, struct, base64, json, urllib.request
+          w = h = 64
+          raw = b""
+          for y in range(h):
+              raw += b"\x00"
+              for x in range(w):
+                  raw += bytes(((x * 4) % 256, (y * 4) % 256, 128))
+          def chunk(t, d):
+              c = t + d
+              return struct.pack(">I", len(d)) + c + struct.pack(">I", zlib.crc32(c) & 0xFFFFFFFF)
+          png = b"\x89PNG\r\n\x1a\n"
+          png += chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+          png += chunk(b"IDAT", zlib.compress(raw, 9))
+          png += chunk(b"IEND", b"")
+          body = json.dumps({"mime": "image/png", "data": base64.b64encode(png).decode()}).encode()
+          req = urllib.request.Request(
+              "https://stx-trace.vercel.app/api/image",
+              data=body,
+              headers={"content-type": "application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=60) as r:
+              print(r.read().decode())
+          PY
+          echo "response: $(cat /tmp/resp.json)"
+          URL=$(python3 -c "import json,sys; d=json.load(open('/tmp/resp.json')); assert d.get('url'), d; assert d.get('expiresInSeconds')==1800, d; print(d['url'])")
+          echo "signed_url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch signed URL (must be publicly readable)
+        run: |
+          curl -sS -o /tmp/dl.png -w "http_code=%{http_code}\n" --max-time 60 "${{ steps.upload.outputs.signed_url }}"
+          test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 '${{ steps.upload.outputs.signed_url }}')" = "200"
+          python3 -c "
+          data = open('/tmp/dl.png','rb').read()
+          assert data[:8] == b'\x89PNG\r\n\x1a\n', 'not a PNG'
+          print('PNG verified,', len(data), 'bytes')
+          "
