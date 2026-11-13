@@ -1152,3 +1152,118 @@ button {
   gap: 6px;
   margin-top: 8px;
 }
+
+/* ── Image search / gallery ─────────────────────────────── */
+.hosted-box {
+  margin-top: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.hosted-url {
+  font-size: 11px;
+  color: var(--blue);
+  word-break: break-all;
+  background: #0a0f14;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  margin-top: 8px;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.gallery-item {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0a0f14;
+}
+.gallery-item img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  display: block;
+}
+.gallery-x {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(5, 10, 14, 0.85);
+  color: var(--bad);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.gallery-x:hover {
+  background: var(--bad);
+  color: #fff;
+}
+.gallery-name {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 4px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.probe-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.match-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 12px;
+}
+.match-row img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.match-row.band-match {
+  border-color: rgba(34, 224, 161, 0.5);
+}
+.match-row.band-likely {
+  border-color: rgba(76, 194, 255, 0.45);
+}
+.match-name {
+  font-weight: 600;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.match-score {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--blue);
+  min-width: 44px;
+  text-align: right;
+}

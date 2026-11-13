@@ -8,8 +8,9 @@ import { PhonePanel } from "@/components/phone-panel";
 import { IdentityPanel } from "@/components/identity-panel";
 import { ReportPanel } from "@/components/report-panel";
 import { FacePanel } from "@/components/face-panel";
+import { ImagePanel } from "@/components/image-panel";
 
-type TabId = "username" | "email" | "phone" | "identity" | "face" | "report";
+type TabId = "username" | "email" | "phone" | "identity" | "face" | "image" | "report";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "username", label: "@ Username" },
@@ -17,6 +18,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "phone", label: "☎ Phone" },
   { id: "identity", label: "◉ Identity" },
   { id: "face", label: "▣ Face verify" },
+  { id: "image", label: "🔍 Image search" },
   { id: "report", label: "☰ AI report" },
 ];
 
@@ -76,7 +78,7 @@ export default function Home() {
           <b>2</b> email · phone · identity ×7 sources
         </span>
         <span className="flow-chip">
-          <b>3</b> AI face verify (fast/accurate)
+          <b>3</b> face verify · reverse image search
         </span>
         <span className="flow-chip">
           <b>4</b> exposure score + AI report
@@ -113,6 +115,9 @@ export default function Home() {
         </div>
         <div className={`tabpanel ${tab === "face" ? "" : "hidden"}`}>
           <FacePanel onCollect={collect} />
+        </div>
+        <div className={`tabpanel ${tab === "image" ? "" : "hidden"}`}>
+          <ImagePanel />
         </div>
         <div className={`tabpanel ${tab === "report" ? "" : "hidden"}`}>
           <ReportPanel findings={findings} />
