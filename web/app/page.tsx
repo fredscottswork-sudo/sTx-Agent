@@ -9,14 +9,16 @@ import { IdentityPanel } from "@/components/identity-panel";
 import { ReportPanel } from "@/components/report-panel";
 import { FacePanel } from "@/components/face-panel";
 import { ImagePanel } from "@/components/image-panel";
+import { ReconPanel } from "@/components/recon-panel";
 
-type TabId = "username" | "email" | "phone" | "identity" | "face" | "image" | "report";
+type TabId = "username" | "email" | "phone" | "identity" | "recon" | "face" | "image" | "report";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "username", label: "@ Username" },
   { id: "email", label: "✉ Email" },
   { id: "phone", label: "☎ Phone" },
   { id: "identity", label: "◉ Identity" },
+  { id: "recon", label: "🛰 Recon" },
   { id: "face", label: "▣ Face verify" },
   { id: "image", label: "🔍 Image search" },
   { id: "report", label: "☰ AI report" },
@@ -81,7 +83,10 @@ export default function Home() {
           <b>3</b> face verify · reverse image search
         </span>
         <span className="flow-chip">
-          <b>4</b> exposure score + AI report
+          <b>4</b> recon: DNS · TLS · ports · dorks
+        </span>
+        <span className="flow-chip">
+          <b>5</b> exposure score + AI report
         </span>
       </div>
 
@@ -112,6 +117,9 @@ export default function Home() {
         </div>
         <div className={`tabpanel ${tab === "identity" ? "" : "hidden"}`}>
           <IdentityPanel onCollect={collect} />
+        </div>
+        <div className={`tabpanel ${tab === "recon" ? "" : "hidden"}`}>
+          <ReconPanel />
         </div>
         <div className={`tabpanel ${tab === "face" ? "" : "hidden"}`}>
           <FacePanel onCollect={collect} />
@@ -146,6 +154,11 @@ export default function Home() {
               <li>
                 <strong>Face verification is 1:1.</strong> It compares two photos you supply. It does
                 not identify unknown people from photo databases, and images stay in your browser.
+              </li>
+              <li>
+                <strong>Active recon is real.</strong> The Recon tab sends actual DNS, HTTP and TCP
+                probes to the target you enter. Only scan infrastructure you own or have explicit
+                permission to test.
               </li>
               <li>
                 <strong>Legitimate purposes.</strong> Research, due diligence on yourself/your
