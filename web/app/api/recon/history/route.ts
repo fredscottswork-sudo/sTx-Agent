@@ -26,9 +26,13 @@ async function runHistory(domain: string, send: (o: unknown) => void) {
     `&filter=statuscode:200&limit=${CDX_LIMIT}`;
   let rows: string[][] = [];
   let lastErr: unknown = null;
+  // Hard deadline: stay well under maxDuration even with one retry.
+  const hardDeadline = Date.now() + 42_000;
   for (let attempt = 0; attempt < 2; attempt++) {
+    const remaining = hardDeadline - Date.now();
+    if (remaining < 5_000) break;
     const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 28_000);
+    const timer = setTimeout(() => ctl.abort(), Math.min(26_000, remaining - 1_500));
     try {
       const res = await fetch(cdx, {
         signal: ctl.signal,
@@ -42,12 +46,14 @@ async function runHistory(domain: string, send: (o: unknown) => void) {
         break;
       }
       lastErr = new Error(`archive.org HTTP ${res.status}`);
-      if (res.status === 429 || res.status >= 500) {
-        await new Promise((r) => setTimeout(r, 1200));
+      if ((res.status === 429 || res.status >= 500) && hardDeadline - Date.now() > 6_000) {
+        await new Promise((r) => setTimeout(r, 1_000));
       } else break;
     } catch (e) {
       lastErr = e;
-      await new Promise((r) => setTimeout(r, 800));
+      if (hardDeadline - Date.now() > 6_000) {
+        await new Promise((r) => setTimeout(r, 600));
+      }
     } finally {
       clearTimeout(timer);
     }
