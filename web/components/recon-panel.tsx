@@ -922,6 +922,8 @@ function HistoryMode() {
   const [rows, setRows] = useState<WaybackRow[]>([]);
   const [done, setDone] = useState<Record<string, unknown> | null>(null);
   const [received, setReceived] = useState<number | null>(null);
+  const [source, setSource] = useState("");
+  const [note, setNote] = useState("");
   const [elapsed, setElapsed] = useState(0);
 
   async function run() {
@@ -932,12 +934,18 @@ function HistoryMode() {
     setRows([]);
     setDone(null);
     setReceived(null);
+    setSource("");
+    setNote("");
     setElapsed(0);
     const t0 = Date.now();
     const timer = setInterval(() => setElapsed((Date.now() - t0) / 1000), 250);
     try {
       await streamPost("/api/recon/history", { domain: t }, (ev) => {
-        if (ev.type === "received") setReceived(ev.count);
+        if (ev.type === "source") {
+          setSource(ev.source);
+          setReceived(ev.received);
+        } else if (ev.type === "received") setReceived(ev.count);
+        else if (ev.type === "note") setNote(ev.message);
         else if (ev.type === "url") setRows((r) => [...r, ev.row as WaybackRow]);
         else if (ev.type === "done") setDone(ev);
       });
@@ -977,8 +985,9 @@ function HistoryMode() {
         </button>
       </div>
       <div className="small muted mt8">
-        Queries the Internet Archive CDX API for every archived URL of the target (up to 2,500
-        unique) and flags sensitive ones: env files, backups, logs, admin paths, leaky parameters.
+        Pulls archived URLs of the target from the Internet Archive (falling back to Common Crawl
+        when archive.org is down) and flags sensitive ones: env files, backups, logs, admin paths,
+        leaky parameters.
       </div>
 
       {running && (
@@ -992,11 +1001,15 @@ function HistoryMode() {
 
       <ErrorBox error={error} />
 
+      {note && <div className="small muted mt8">ℹ {note}</div>}
+
       {done && (
         <div className="stats">
           <div className="stat blue">
             <div className="stat-v">{String(done.total)}</div>
-            <div className="stat-l">archived URLs</div>
+            <div className="stat-l">
+              archived URLs · {String(done.source || source || "web archive")}
+            </div>
           </div>
           <div className={`stat ${Number(done.interesting) > 0 ? "warn" : ""}`}>
             <div className="stat-v">{String(done.interesting)}</div>
